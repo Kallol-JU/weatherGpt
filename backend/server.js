@@ -6,6 +6,8 @@ import dotenv from "dotenv";
 import mongoose from "mongoose";
 import { GoogleGenAI } from "@google/genai";
 import Chat from "./models/Chat.js";
+import rateLimit from "express-rate-limit";
+import { RateLimiterMemory } from "rate-limiter-flexible";
 
 dotenv.config();
 
@@ -22,6 +24,19 @@ mongoose
   .connect(process.env.MONGO_URI)
   .then(() => console.log("Successfully connected to MongoDB!"))
   .catch((err) => console.error("MongoDB connection error:", err));
+
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 50,
+  message: { error: "Too many requests. Please try again after 15 minutes." },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+app.use("/api/", apiLimiter);
+const socketLimiter = new RateLimiterMemory({
+  points: 5,
+  duration: 60,
+});
 
 app.post("/api/weather-insight", async (req, res) => {
   const { city } = req.body || {};
@@ -92,6 +107,18 @@ io.on("connection", (socket) => {
   console.log(`User connected: ${socket.id}`);
 
   socket.on("send_prompt", async (data) => {
+    // rate limiter checking
+    try {
+      if (typeof socketLimiter !== "undefined") {
+        await socketLimiter.consume(socket.handshake.address);
+      }
+    } catch (rejRes) {
+      return socket.emit("receive_reply_done", {
+        reply:
+          "Rate limit reached. Please wait a minute before sending another prompt.",
+      });
+    }
+
     try {
       const { message, lat, lon, language = "English", userId } = data;
       console.log(`Received from React: "${message}" (Language: ${language})`);
@@ -116,7 +143,6 @@ io.on("connection", (socket) => {
         - YOU MUST RESPOND IN THIS LANGUAGE: ${language}.
       `;
 
-      //streaming endpoint
       const streamResult = await ai.models.generateContentStream({
         model: "gemini-3.5-flash",
         contents: systemInstruction,
@@ -133,9 +159,7 @@ io.on("connection", (socket) => {
         }
       }
 
-      socket.emit("receive_reply_done", {
-        reply: "Error processing the weather data. Please try again.",
-      });
+      socket.emit("receive_reply_done", { reply: finalAnswer });
 
       await Chat.findOneAndUpdate(
         { userId: userId || socket.id },
@@ -152,7 +176,8 @@ io.on("connection", (socket) => {
       );
     } catch (error) {
       console.error("AI Routing Error:", error);
-      socket.emit("receive_reply", {
+
+      socket.emit("receive_reply_done", {
         reply: "Error processing the weather data. Please try again.",
       });
     }
