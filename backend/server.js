@@ -5,7 +5,7 @@ import cors from "cors";
 import dotenv from "dotenv";
 import mongoose from "mongoose";
 import { GoogleGenAI } from "@google/genai";
-import Chat from "./models/Chat.js"; // Ensure you have this file from Phase 2!
+import Chat from "./models/Chat.js";
 
 dotenv.config();
 
@@ -16,14 +16,77 @@ app.use(express.json());
 const httpServer = createServer(app);
 const io = new Server(httpServer, { cors: { origin: "*" } });
 
-// Initialize Gemini
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
-// Connect to MongoDB
 mongoose
   .connect(process.env.MONGO_URI)
   .then(() => console.log("Successfully connected to MongoDB!"))
-  .catch((err) => console.error(err));
+  .catch((err) => console.error("MongoDB connection error:", err));
+
+app.post("/api/weather-insight", async (req, res) => {
+  const { city } = req.body || {};
+
+  if (!city) {
+    return res.status(400).json({ error: "City name is required" });
+  }
+
+  try {
+    const weatherUrl = `https://api.openweathermap.org/data/2.5/weather?q=${city}&units=metric&appid=${process.env.OPENWEATHER_API_KEY}`;
+    const response = await fetch(weatherUrl);
+    const weatherData = await response.json();
+
+    if (weatherData.cod !== 200) {
+      return res.status(weatherData.cod).json({ error: weatherData.message });
+    }
+
+    const temp = weatherData.main.temp;
+    const condition = weatherData.weather[0].description;
+    const humidity = weatherData.main.humidity;
+    const windSpeed = weatherData.wind.speed;
+
+    const prompt = `
+      You are an engaging weather assistant. The current weather for ${city} is:
+      - Temperature: ${temp}°C
+      - Conditions: ${condition}
+      - Humidity: ${humidity}%
+      - Wind Speed: ${windSpeed} m/s
+      
+      Based on this data, write a short, 2-sentence creative weather update advising the user on what to wear or expect.
+    `;
+
+    const aiResponse = await ai.models.generateContent({
+      model: "gemini-3.5-flash",
+      contents: prompt,
+    });
+
+    const aiSummary = aiResponse.text;
+
+    res.json({
+      success: true,
+      aiSummary: aiSummary,
+      rawWeather: weatherData,
+    });
+  } catch (error) {
+    console.error("Pipeline Error:", error);
+    res.status(500).json({ error: "Failed to generate weather insight" });
+  }
+});
+
+app.get("/api/history/:userId", async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const chatData = await Chat.findOne({ userId });
+
+    if (!chatData) {
+      return res.json({ success: true, history: [] });
+    }
+
+    res.json({ success: true, history: chatData.history });
+  } catch (error) {
+    console.error("History Fetch Error:", error);
+    res.status(500).json({ error: "Failed to retrieve chat history" });
+  }
+});
 
 io.on("connection", (socket) => {
   console.log(`User connected: ${socket.id}`);
@@ -33,32 +96,47 @@ io.on("connection", (socket) => {
       const { message, lat, lon, language = "English", userId } = data;
       console.log(`Received from React: "${message}" (Language: ${language})`);
 
-      // 1. Fetch Real-time Weather (GFS Model)
-      const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,precipitation,wind_speed_10m&models=gfs_seamless`;
+      const weatherUrl = `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&units=metric&appid=${process.env.OPENWEATHER_API_KEY}`;
       const weatherRes = await fetch(weatherUrl);
       const weatherData = await weatherRes.json();
 
-      // 2. Construct the strict Prompt for Gemini
+      if (weatherData.cod && weatherData.cod !== 200) {
+        throw new Error(weatherData.message || "Weather API Error");
+      }
+
       const systemInstruction = `
         You are WeatherGPT, an AI disaster management assistant.
         The user asked: "${message}"
         Their coordinates are Lat: ${lat}, Lon: ${lon}.
-        Live Meteorological Data: ${JSON.stringify(weatherData.current)}
+        Live Meteorological Data: ${JSON.stringify(weatherData)}
         
         Rules:
         - Analyze the weather data and answer the user's query briefly.
-        - If wind_speed_10m is > 40 or precipitation is > 10, start your response with a severe weather warning.
+        - Check fields like 'wind.speed' or 'weather' descriptions to issue severe weather warnings.
         - YOU MUST RESPOND IN THIS LANGUAGE: ${language}.
       `;
 
-      // 3. Generate the Response via Gemini
-      const aiResponse = await ai.models.generateContent({
-        model: "gemini-3.6-flash",
+      //streaming endpoint
+      const streamResult = await ai.models.generateContentStream({
+        model: "gemini-3.5-flash",
         contents: systemInstruction,
       });
-      const finalAnswer = aiResponse.text;
 
-      // 4. Save the conversation context to MongoDB
+      let finalAnswer = "";
+
+      for await (const chunk of streamResult) {
+        const chunkText = chunk.text;
+
+        if (chunkText) {
+          finalAnswer += chunkText;
+          socket.emit("receive_reply_chunk", { chunk: chunkText });
+        }
+      }
+
+      socket.emit("receive_reply_done", {
+        reply: "Error processing the weather data. Please try again.",
+      });
+
       await Chat.findOneAndUpdate(
         { userId: userId || socket.id },
         {
@@ -72,9 +150,6 @@ io.on("connection", (socket) => {
         },
         { upsert: true, returnDocument: "after" },
       );
-
-      // 5. Emit back to the client
-      socket.emit("receive_reply", { reply: finalAnswer });
     } catch (error) {
       console.error("AI Routing Error:", error);
       socket.emit("receive_reply", {
