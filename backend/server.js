@@ -8,6 +8,8 @@ import { GoogleGenAI } from "@google/genai";
 import Chat from "./models/Chat.js";
 import rateLimit from "express-rate-limit";
 import { RateLimiterMemory } from "rate-limiter-flexible";
+import authRoutes from "./routes/auth.js";
+import { protect } from "./middleware/auth.js";
 
 dotenv.config();
 
@@ -32,7 +34,10 @@ const apiLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
 });
+
 app.use("/api/", apiLimiter);
+app.use("/api/auth", authRoutes);
+
 const socketLimiter = new RateLimiterMemory({
   points: 5,
   duration: 60,
@@ -87,10 +92,9 @@ app.post("/api/weather-insight", async (req, res) => {
   }
 });
 
-app.get("/api/history/:userId", async (req, res) => {
+app.get("/api/history", protect, async (req, res) => {
   try {
-    const { userId } = req.params;
-    const chatData = await Chat.findOne({ userId });
+    const chatData = await Chat.findOne({ userId: req.userId });
 
     if (!chatData) {
       return res.json({ success: true, history: [] });
