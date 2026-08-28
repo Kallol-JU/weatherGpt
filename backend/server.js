@@ -10,6 +10,7 @@ import rateLimit from "express-rate-limit";
 import { RateLimiterMemory } from "rate-limiter-flexible";
 import authRoutes from "./routes/auth.js";
 import { protect } from "./middleware/auth.js";
+import jwt from "jsonwebtoken";
 
 dotenv.config();
 
@@ -107,6 +108,24 @@ app.get("/api/history", protect, async (req, res) => {
   }
 });
 
+// socket auth middleware
+io.use((socket, next) => {
+  const token = socket.handshake.auth.token;
+
+  if (!token) {
+    return next(new Error("Authentication error: No token provided"));
+  }
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+    socket.userId = decoded.id;
+    next();
+  } catch (error) {
+    return next(new Error("Authentication error: Invalid token"));
+  }
+});
+
 io.on("connection", (socket) => {
   console.log(`User connected: ${socket.id}`);
 
@@ -124,7 +143,7 @@ io.on("connection", (socket) => {
     }
 
     try {
-      const { message, lat, lon, language = "English", userId } = data;
+      const { message, lat, lon, language = "English" } = data;
       console.log(`Received from React: "${message}" (Language: ${language})`);
 
       const weatherUrl = `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&units=metric&appid=${process.env.OPENWEATHER_API_KEY}`;
@@ -166,7 +185,7 @@ io.on("connection", (socket) => {
       socket.emit("receive_reply_done", { reply: finalAnswer });
 
       await Chat.findOneAndUpdate(
-        { userId: userId || socket.id },
+        { userId: socket.userId },
         {
           $set: { location: { lat, lon } },
           $push: {
