@@ -11,6 +11,7 @@ import { RateLimiterMemory } from "rate-limiter-flexible";
 import authRoutes from "./routes/auth.js";
 import { protect } from "./middleware/auth.js";
 import jwt from "jsonwebtoken";
+import userRoutes from "./routes/user.js";
 
 dotenv.config();
 
@@ -38,6 +39,7 @@ const apiLimiter = rateLimit({
 
 app.use("/api/", apiLimiter);
 app.use("/api/auth", authRoutes);
+app.use("/api/user", userRoutes);
 
 const socketLimiter = new RateLimiterMemory({
   points: 5,
