@@ -1,51 +1,61 @@
 # WeatherGPT Frontend
 
-A ChatGPT-style conversational weather frontend for the SIH WeatherGPT project.
-
-## What is implemented
-
-1. Welcome / onboarding experience
-2. ChatGPT-like conversation layer
-3. Forecast layer with current conditions and 7-day forecast
-4. Weather alerts and safety layer
-5. Location selection
-6. Domain advisories (farming, aviation, marine, urban)
-7. Climate / historical analytics layer
-8. Voice interaction UI
-9. Conversation history
-10. Preferences, language toggle, dark mode, responsive mobile UI
-
-The home screen intentionally stays simple. Detailed weather information appears as part of the conversation or when the user opens a dedicated layer.
+This frontend is designed around the provided WeatherGPT backend without modifying the backend code.
 
 ## Run
 
-```bash
-npm install
-npm run dev
+Open this folder in VS Code:
+
+```text
+WeatherGPT-Neumorphic-Full-Frontend/
+└── frontend/
 ```
 
-If PowerShell blocks `npm.ps1` on Windows, use:
+Install and run:
 
 ```powershell
 npm.cmd install
 npm.cmd run dev
 ```
 
-## Backend handoff
+## Backend connection
 
-`src/services/api.js` contains the frontend API adapter.
-
-Create `.env` from `.env.example`:
+Create `frontend/.env`:
 
 ```env
-VITE_API_URL=http://localhost:8000
+VITE_API_URL=http://localhost:5000
 ```
 
-The expected adapter endpoints are currently:
+Use the same port configured by `backend/.env` (`PORT`).
 
-- `POST /api/chat`
-- `GET /api/weather?location=...`
+Start the backend separately:
 
-These can be changed in `src/services/api.js` once the backend contract is finalized.
+```powershell
+cd ..\backend
+npm.cmd install
+node server.js
+```
 
-Until the backend is connected, the chat uses local demo responses so the complete UI can be demonstrated without an API key.
+## What is connected
+
+- `POST /api/auth/login`
+- `POST /api/auth/register`
+- `GET /api/history` with Bearer token
+- Socket.IO `send_prompt`
+- Socket.IO `receive_reply_chunk`
+- Socket.IO `receive_reply_done`
+- Browser-side geocoding + Open-Meteo forecast for dashboard visualizations
+
+The backend was intentionally left unchanged.
+
+## Important backend environment
+
+The supplied backend code reads these values:
+
+- `PORT`
+- `GEMINI_API_KEY`
+- `MONGO_URI`
+- `JWT_SECRET`
+- `OPENWEATHER_API_KEY`
+
+Keep these secrets in `backend/.env`, never in the React frontend.
