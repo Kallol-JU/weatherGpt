@@ -93,6 +93,42 @@ app.post("/api/weather-insight", async (req, res) => {
   }
 });
 
+app.get("/api/forecast", protect, async (req, res) => {
+  try {
+    const { lat, lon } = req.query;
+
+    if (!lat || !lon) {
+      return res
+        .status(400)
+        .json({ error: "Latitude and longitude are required." });
+    }
+
+    const isWithinIndia =
+      lat >= 8.4 && lat <= 37.6 && lon >= 68.7 && lon <= 97.25;
+    if (!isWithinIndia) {
+      return res.status(403).json({
+        error: "Forecast data is restricted to Indian territories only.",
+      });
+    }
+
+    // fetching the 5-day / 3-hour forecast
+    const forecastUrl = `https://api.openweathermap.org/data/2.5/forecast?lat=${lat}&lon=${lon}&units=metric&appid=${process.env.OPENWEATHER_API_KEY}`;
+    const response = await fetch(forecastUrl);
+    const forecastData = await response.json();
+
+    if (forecastData.cod !== "200") {
+      return res
+        .status(Number(forecastData.cod))
+        .json({ error: forecastData.message });
+    }
+
+    res.json({ success: true, forecast: forecastData });
+  } catch (error) {
+    console.error("Forecast API Error:", error);
+    res.status(500).json({ error: "Failed to fetch forecast data." });
+  }
+});
+
 app.get("/api/history", protect, async (req, res) => {
   try {
     const chatData = await Chat.findOne({ userId: req.userId });
