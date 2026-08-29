@@ -44,8 +44,10 @@ export function ChatPanel({
   streaming,
   onLogin,
   language,
+  onStop, // 1. Added onStop prop
 }) {
   const endRef = useRef(null);
+  const recognitionRef = useRef(null); // 2. Store mic instance to allow stopping
   const [isRecording, setIsRecording] = useState(false);
 
   useEffect(() => {
@@ -82,6 +84,7 @@ export function ChatPanel({
     }
 
     const recognition = new SpeechRecognition();
+    recognitionRef.current = recognition; // Save instance to ref
     recognition.interimResults = false;
 
     const langCodes = {
@@ -114,6 +117,12 @@ export function ChatPanel({
     };
 
     recognition.start();
+  };
+  const stopVoiceInput = () => {
+    if (recognitionRef.current) {
+      recognitionRef.current.stop();
+      setIsRecording(false);
+    }
   };
 
   return (
@@ -185,14 +194,15 @@ export function ChatPanel({
           type="button"
           className={`mic ${isRecording ? "recording" : ""}`}
           aria-label="Voice input"
-          onClick={startVoiceInput}
-          disabled={streaming || isRecording}
+          // 3. Toggle start/stop based on recording state
+          onClick={isRecording ? stopVoiceInput : startVoiceInput}
+          disabled={streaming} // Removed isRecording from disabled logic
           style={{
             color: isRecording ? "#ff4757" : "inherit",
             animation: isRecording ? "pulse 1.5s infinite" : "none",
           }}
         >
-          {isRecording ? "🔴" : "🎙️"}
+          {isRecording ? "◼" : "🎙️"}
         </button>
 
         <textarea
@@ -206,14 +216,27 @@ export function ChatPanel({
           disabled={streaming}
         />
 
-        <button
-          className="send"
-          type="submit"
-          disabled={!input.trim() || streaming}
-          aria-label="Send message"
-        >
-          ➤
-        </button>
+        {/* 4. Swap Send icon for Stop icon when generating */}
+        {streaming ? (
+          <button
+            className="send stop-btn"
+            type="button"
+            onClick={onStop}
+            aria-label="Stop generating"
+            style={{ fontSize: "1.2rem" }}
+          >
+            ◼
+          </button>
+        ) : (
+          <button
+            className="send"
+            type="submit"
+            disabled={!input.trim()}
+            aria-label="Send message"
+          >
+            ➤
+          </button>
+        )}
       </form>
 
       {!connected && (
@@ -221,7 +244,6 @@ export function ChatPanel({
           Sign in to unlock the live WeatherGPT assistant
         </button>
       )}
-
       <p className="chat-disclaimer">
         WeatherGPT can make mistakes. Please verify important information.
       </p>

@@ -288,7 +288,13 @@ io.use((socket, next) => {
 io.on("connection", (socket) => {
   console.log(`User connected: ${socket.id}`);
 
+  socket.on("stop_prompt", () => {
+    socket.stopStream = true;
+  });
+
   socket.on("send_prompt", async (data) => {
+    socket.stopStream = false;
+
     try {
       if (typeof socketLimiter !== "undefined") {
         await socketLimiter.consume(socket.handshake.address);
@@ -336,21 +342,21 @@ io.on("connection", (socket) => {
       const systemInstruction = `
         You are WeatherGPT, an AI disaster management assistant for the Indian government.
   
-  User Message: "${message}"
-  Target Language Preference: ${language}
-  Official Location: ${locationContext} (Lat: ${lat}, Lon: ${lon})
-  Live Meteorological Data: ${JSON.stringify(weatherData)}
-  
-  LANGUAGE RULES:
-  - You MUST respond fluently in the language requested by the user.
-  - If the user explicitly asks to write in a specific language inside their message (e.g., "write in Bengali"), OVERRIDE the Target Language Preference and respond ENTIRELY in that requested language.
-  - NEVER output disclaimers saying responses are restricted to English.
-  
-  SAFETY & TERMINOLOGY:
-  - Analyze the weather data and respond concisely.
-  - Use Indian Meteorological Department (IMD) terminology.
-  - If weather conditions are severe, advise citizens to call the NDMA helpline at 1078.
-`;
+        User Message: "${message}"
+        Target Language Preference: ${language}
+        Official Location: ${locationContext} (Lat: ${lat}, Lon: ${lon})
+        Live Meteorological Data: ${JSON.stringify(weatherData)}
+        
+        LANGUAGE RULES:
+        - You MUST respond fluently in the language requested by the user.
+        - If the user explicitly asks to write in a specific language inside their message (e.g., "write in Bengali"), OVERRIDE the Target Language Preference and respond ENTIRELY in that requested language.
+        - NEVER output disclaimers saying responses are restricted to English.
+        
+        SAFETY & TERMINOLOGY:
+        - Analyze the weather data and respond concisely.
+        - Use Indian Meteorological Department (IMD) terminology.
+        - If weather conditions are severe, advise citizens to call the NDMA helpline at 1078.
+      `;
 
       const streamResult = await ai.models.generateContentStream({
         model: "gemini-3.6-flash",
@@ -360,6 +366,11 @@ io.on("connection", (socket) => {
       let finalAnswer = "";
 
       for await (const chunk of streamResult) {
+        if (socket.stopStream) {
+          console.log(`Stream aborted by user: ${socket.id}`);
+          break;
+        }
+
         const chunkText = chunk.text;
         if (chunkText) {
           finalAnswer += chunkText;

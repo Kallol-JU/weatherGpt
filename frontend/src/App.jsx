@@ -285,6 +285,14 @@ function App() {
     });
   }
 
+  function stopGeneration() {
+    setStreaming(false);
+
+    if (socket) {
+      socket.emit("stop_prompt");
+    }
+  }
+
   function handleQuick(q) {
     const map = {
       "Current weather": "What is the current weather?",
@@ -369,6 +377,7 @@ function App() {
                 streaming={streaming}
                 onLogin={() => setAuthOpen(true)}
                 language={language}
+                onStop={stopGeneration}
               />
             </>
           )}
