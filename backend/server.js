@@ -143,8 +143,27 @@ io.on("connection", (socket) => {
     }
 
     try {
-      const { message, lat, lon, language = "English" } = data;
+      const isWithinIndia =
+        lat >= 8.4 && lat <= 37.6 && lon >= 68.7 && lon <= 97.25;
+      if (!isWithinIndia) {
+        return socket.emit("receive_reply_done", {
+          reply: "Error: This portal is restricted to Indian territories only.",
+        });
+      }
       console.log(`Received from React: "${message}" (Language: ${language})`);
+
+      const mapTilerUrl = `https://api.maptiler.com/geocoding/${lon},${lat}.json?key=${process.env.MAPTILER_API_KEY}`;
+      const geoRes = await fetch(mapTilerUrl);
+      const geoData = await geoRes.json();
+
+      let locationContext = "India";
+      if (geoData.features && geoData.features.length > 0) {
+        const bestMatch = geoData.features[0];
+        const state =
+          geoData.features.find((f) => f.place_type.includes("region"))?.text ||
+          "";
+        locationContext = `${bestMatch.text}, ${state}`.trim();
+      }
 
       const weatherUrl = `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&units=metric&appid=${process.env.OPENWEATHER_API_KEY}`;
       const weatherRes = await fetch(weatherUrl);
@@ -155,15 +174,16 @@ io.on("connection", (socket) => {
       }
 
       const systemInstruction = `
-        You are WeatherGPT, an AI disaster management assistant.
-        The user asked: "${message}"
-        Their coordinates are Lat: ${lat}, Lon: ${lon}.
-        Live Meteorological Data: ${JSON.stringify(weatherData)}
-        
-        Rules:
-        - Analyze the weather data and answer the user's query briefly.
-        - Check fields like 'wind.speed' or 'weather' descriptions to issue severe weather warnings.
-        - YOU MUST RESPOND IN THIS LANGUAGE: ${language}.
+        You are WeatherGPT, an AI disaster management assistant for the Indian government.
+  The user asked: "${message}"
+  Official Location: ${locationContext} (Lat: ${lat}, Lon: ${lon}).
+  Live Meteorological Data: ${JSON.stringify(weatherData)}
+  
+  Rules:
+  - Analyze the data and answer briefly.
+  - Use Indian Meteorological Department (IMD) terminology (e.g., use "Cyclonic Storm" instead of "Hurricane").
+  - If conditions are severe, advise citizens to contact the NDMA helpline at 1078.
+  - YOU MUST RESPOND IN THIS LANGUAGE: ${language}.
       `;
 
       const streamResult = await ai.models.generateContentStream({
