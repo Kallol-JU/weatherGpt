@@ -129,6 +129,65 @@ app.get("/api/forecast", protect, async (req, res) => {
   }
 });
 
+app.get("/api/advisory", protect, async (req, res) => {
+  try {
+    const { lat, lon, sector } = req.query;
+
+    if (!lat || !lon || !sector) {
+      return res
+        .status(400)
+        .json({ error: "Latitude, longitude, and sector are required." });
+    }
+
+    const isWithinIndia =
+      lat >= 8.4 && lat <= 37.6 && lon >= 68.7 && lon <= 97.25;
+    if (!isWithinIndia) {
+      return res
+        .status(403)
+        .json({ error: "Restricted to Indian territories only." });
+    }
+
+    const weatherUrl = `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&units=metric&appid=${process.env.OPENWEATHER_API_KEY}`;
+    const weatherRes = await fetch(weatherUrl);
+    const weatherData = await weatherRes.json();
+
+    if (weatherData.cod && weatherData.cod !== 200) {
+      return res
+        .status(Number(weatherData.cod))
+        .json({ error: weatherData.message });
+    }
+
+    const prompt = `
+      You are an expert meteorological advisor for the Indian government.
+      Current weather data: ${JSON.stringify(weatherData)}
+      
+      Generate a ${sector} advisory based strictly on IMD guidelines.
+      You MUST return ONLY valid JSON in this exact structure, with no markdown formatting or extra text:
+      {
+        "suitability": "string (e.g., Good, Fair, Poor, Dangerous)",
+        "summary": "string (1 brief sentence)",
+        "tips": ["string", "string"]
+      }
+    `;
+
+    const aiResponse = await ai.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: prompt,
+    });
+
+    const rawText = aiResponse.text
+      .replace(/```json/g, "")
+      .replace(/```/g, "")
+      .trim();
+    const advisoryJson = JSON.parse(rawText);
+
+    res.json({ success: true, sector, advisory: advisoryJson });
+  } catch (error) {
+    console.error("Advisory API Error:", error);
+    res.status(500).json({ error: "Failed to generate sector advisory." });
+  }
+});
+
 app.get("/api/history", protect, async (req, res) => {
   try {
     const chatData = await Chat.findOne({ userId: req.userId });
@@ -166,7 +225,6 @@ io.on("connection", (socket) => {
   console.log(`User connected: ${socket.id}`);
 
   socket.on("send_prompt", async (data) => {
-    // rate limiter checking
     try {
       if (typeof socketLimiter !== "undefined") {
         await socketLimiter.consume(socket.handshake.address);
@@ -179,6 +237,9 @@ io.on("connection", (socket) => {
     }
 
     try {
+      const { message, lat, lon, language = "English" } = data;
+      console.log(`Received from React: "${message}" (Language: ${language})`);
+
       const isWithinIndia =
         lat >= 8.4 && lat <= 37.6 && lon >= 68.7 && lon <= 97.25;
       if (!isWithinIndia) {
@@ -186,7 +247,6 @@ io.on("connection", (socket) => {
           reply: "Error: This portal is restricted to Indian territories only.",
         });
       }
-      console.log(`Received from React: "${message}" (Language: ${language})`);
 
       const mapTilerUrl = `https://api.maptiler.com/geocoding/${lon},${lat}.json?key=${process.env.MAPTILER_API_KEY}`;
       const geoRes = await fetch(mapTilerUrl);
@@ -211,19 +271,19 @@ io.on("connection", (socket) => {
 
       const systemInstruction = `
         You are WeatherGPT, an AI disaster management assistant for the Indian government.
-  The user asked: "${message}"
-  Official Location: ${locationContext} (Lat: ${lat}, Lon: ${lon}).
-  Live Meteorological Data: ${JSON.stringify(weatherData)}
-  
-  Rules:
-  - Analyze the data and answer briefly.
-  - Use Indian Meteorological Department (IMD) terminology (e.g., use "Cyclonic Storm" instead of "Hurricane").
-  - If conditions are severe, advise citizens to contact the NDMA helpline at 1078.
-  - YOU MUST RESPOND IN THIS LANGUAGE: ${language}.
+        The user asked: "${message}"
+        Official Location: ${locationContext} (Lat: ${lat}, Lon: ${lon}).
+        Live Meteorological Data: ${JSON.stringify(weatherData)}
+        
+        Rules:
+        - Analyze the weather data and answer briefly.
+        - Use Indian Meteorological Department (IMD) terminology (e.g., use "Cyclonic Storm" instead of "Hurricane").
+        - If conditions are severe, advise citizens to contact the NDMA helpline at 1078.
+        - YOU MUST RESPOND IN THIS LANGUAGE: ${language}.
       `;
 
       const streamResult = await ai.models.generateContentStream({
-        model: "gemini-3.5-flash",
+        model: "gemini-2.5-flash",
         contents: systemInstruction,
       });
 
@@ -231,7 +291,6 @@ io.on("connection", (socket) => {
 
       for await (const chunk of streamResult) {
         const chunkText = chunk.text;
-
         if (chunkText) {
           finalAnswer += chunkText;
           socket.emit("receive_reply_chunk", { chunk: chunkText });
@@ -255,7 +314,6 @@ io.on("connection", (socket) => {
       );
     } catch (error) {
       console.error("AI Routing Error:", error);
-
       socket.emit("receive_reply_done", {
         reply: "Error processing the weather data. Please try again.",
       });
