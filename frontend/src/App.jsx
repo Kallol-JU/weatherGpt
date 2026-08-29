@@ -308,6 +308,7 @@ function App() {
                 connected={connected}
                 streaming={streaming}
                 onLogin={() => setAuthOpen(true)}
+                language={language}
               />
             </>
           )}

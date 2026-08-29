@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 
 function ChatMessage({ message }) {
@@ -45,6 +45,7 @@ export function ChatPanel({
   onLogin,
 }) {
   const endRef = useRef(null);
+  const [isRecording, setIsRecording] = useState(false);
 
   useEffect(() => {
     endRef.current?.scrollIntoView({
@@ -55,11 +56,8 @@ export function ChatPanel({
 
   const submit = (event) => {
     event.preventDefault();
-
     const text = input.trim();
-
     if (!text || streaming) return;
-
     onSend(text);
   };
 
@@ -70,15 +68,60 @@ export function ChatPanel({
     }
   };
 
+  // --- Voice to Text Handler ---
+  const startVoiceInput = () => {
+    const SpeechRecognition =
+      window.SpeechRecognition || window.webkitSpeechRecognition;
+
+    if (!SpeechRecognition) {
+      alert(
+        "Voice input is not supported in this browser. Please use Chrome or Edge.",
+      );
+      return;
+    }
+
+    const recognition = new SpeechRecognition();
+    recognition.interimResults = false;
+
+    const langCodes = {
+      English: "en-IN",
+      Hindi: "hi-IN",
+      Bengali: "bn-IN",
+      Tamil: "ta-IN",
+      Telugu: "te-IN",
+    };
+
+    recognition.lang = langCodes[language] || "en-IN";
+
+    recognition.onstart = () => {
+      setIsRecording(true);
+    };
+
+    recognition.onresult = (event) => {
+      const transcript = event.results[0][0].transcript;
+      // Append spoken text to whatever is already typed in the input
+      setInput((prev) => (prev ? `${prev} ${transcript}` : transcript));
+    };
+
+    recognition.onerror = (event) => {
+      console.error("Speech recognition error:", event.error);
+      setIsRecording(false);
+    };
+
+    recognition.onend = () => {
+      setIsRecording(false);
+    };
+
+    recognition.start();
+  };
+
   return (
     <aside className="chat-panel">
       {/* Header */}
       <header className="chat-head">
         <span className="ai-logo">✦</span>
-
         <section>
           <h2>WeatherGPT</h2>
-
           <p>
             <i className={connected ? "online" : "offline"} />
             {connected
@@ -86,12 +129,10 @@ export function ChatPanel({
               : "Sign in to use live AI chat"}
           </p>
         </section>
-
         <nav className="chat-head-actions">
           <button type="button" aria-label="New chat">
             ↶
           </button>
-
           <button type="button" aria-label="More options">
             ⋮
           </button>
@@ -118,7 +159,6 @@ export function ChatPanel({
         {streaming && messages[messages.length - 1]?.role !== "assistant" && (
           <TypingIndicator />
         )}
-
         <span ref={endRef} />
       </main>
 
@@ -138,17 +178,29 @@ export function ChatPanel({
         )}
       </nav>
 
-      {/* Input */}
+      {/* Input Form */}
       <form className="chat-input" onSubmit={submit}>
-        <button type="button" className="mic" aria-label="Voice input">
-          🎙️
+        <button
+          type="button"
+          className={`mic ${isRecording ? "recording" : ""}`}
+          aria-label="Voice input"
+          onClick={startVoiceInput}
+          disabled={streaming || isRecording}
+          style={{
+            color: isRecording ? "#ff4757" : "inherit",
+            animation: isRecording ? "pulse 1.5s infinite" : "none",
+          }}
+        >
+          {isRecording ? "🔴" : "🎙️"}
         </button>
 
         <textarea
           value={input}
           onChange={(event) => setInput(event.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="Ask anything about the weather..."
+          placeholder={
+            isRecording ? "Listening..." : "Ask anything about the weather..."
+          }
           rows={1}
           disabled={streaming}
         />
