@@ -190,6 +190,68 @@ app.get("/api/advisory", protect, async (req, res) => {
   }
 });
 
+app.get("/api/climate", protect, async (req, res) => {
+  try {
+    const { lat, lon } = req.query;
+
+    if (!lat || !lon) {
+      return res
+        .status(400)
+        .json({ error: "Latitude and longitude are required." });
+    }
+
+    const isWithinIndia =
+      lat >= 8.4 && lat <= 37.6 && lon >= 68.7 && lon <= 97.25;
+    if (!isWithinIndia) {
+      return res
+        .status(403)
+        .json({ error: "Restricted to Indian territories only." });
+    }
+
+    // Calculating dates for the last 20 years
+    const currentYear = new Date().getFullYear();
+    const startDate = `${currentYear - 20}-01-01`;
+    const endDate = `${currentYear - 1}-12-31`;
+
+    // Fetch from Open-Meteo
+    const archiveUrl = `https://archive-api.open-meteo.com/v1/archive?latitude=${lat}&longitude=${lon}&start_date=${startDate}&end_date=${endDate}&daily=temperature_2m_mean&timezone=auto`;
+
+    const response = await fetch(archiveUrl);
+    const climateData = await response.json();
+
+    if (climateData.error) {
+      return res
+        .status(400)
+        .json({ error: "Failed to fetch historical data from Open-Meteo" });
+    }
+
+    // compressing 20 years of daily data into yearly averages for the react chart
+    const yearlyAverages = {};
+    climateData.daily.time.forEach((date, index) => {
+      const year = date.split("-")[0];
+      const temp = climateData.daily.temperature_2m_mean[index];
+
+      if (temp !== null) {
+        if (!yearlyAverages[year]) yearlyAverages[year] = { sum: 0, count: 0 };
+        yearlyAverages[year].sum += temp;
+        yearlyAverages[year].count += 1;
+      }
+    });
+
+    const trendData = Object.keys(yearlyAverages).map((year) => ({
+      year,
+      averageTemperature: parseFloat(
+        (yearlyAverages[year].sum / yearlyAverages[year].count).toFixed(2),
+      ),
+    }));
+
+    res.json({ success: true, trends: trendData });
+  } catch (error) {
+    console.error("Climate API Error:", error);
+    res.status(500).json({ error: "Failed to fetch climate analytics." });
+  }
+});
+
 app.get("/api/history", protect, async (req, res) => {
   try {
     const chatData = await Chat.findOne({ userId: req.userId });
