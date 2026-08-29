@@ -29,6 +29,87 @@ mongoose
   .then(() => console.log("Successfully connected to MongoDB!"))
   .catch((err) => console.error("MongoDB connection error:", err));
 
+function isWeatherOrTerm(text) {
+  if (!text) return false;
+  const lower = text.toLowerCase();
+
+  const weatherPatterns = [
+    /weather/i,
+    /forecast/i,
+    /climat/i,
+    /temp/i,
+    /deg/i,
+    /rain/i,
+    /shower/i,
+    /drizzle/i,
+    /wet/i,
+    /sun/i,
+    /hot/i,
+    /warm/i,
+    /heat/i,
+    /cold/i,
+    /chill/i,
+    /freeze/i,
+    /frost/i,
+    /snow/i,
+    /ice/i,
+    /wind/i,
+    /breeze/i,
+    /storm/i,
+    /cyclone/i,
+    /monsoon/i,
+    /cloud/i,
+    /overcast/i,
+    /fog/i,
+    /mist/i,
+    /haze/i,
+    /thunder/i,
+    /lightning/i,
+    /humid/i,
+    /pressure/i,
+    /umbrella/i,
+    /jacket/i,
+    /coat/i,
+    /sweater/i,
+    /outfit/i,
+    /wear/i,
+    /aqi/i,
+    /air quality/i,
+    /visibility/i,
+    /sunrise/i,
+    /sunset/i,
+    /imd/i,
+    /meteorolog/i,
+  ];
+
+  const matchesPattern = weatherPatterns.some((pattern) => pattern.test(lower));
+
+  const conversationalWeather =
+    (lower.includes("outside") ||
+      lower.includes("today") ||
+      lower.includes("tomorrow") ||
+      lower.includes("now")) &&
+    (lower.includes("how") ||
+      lower.includes("is it") ||
+      lower.includes("can i") ||
+      lower.includes("should i"));
+
+  const isForbiddenTopic =
+    lower.includes("score") ||
+    lower.includes("match") ||
+    lower.includes("cricket") ||
+    lower.includes("football") ||
+    lower.includes("president") ||
+    lower.includes("code") ||
+    lower.includes("recipe") ||
+    lower.includes("movie") ||
+    lower.includes("song");
+
+  if (isForbiddenTopic) return false;
+
+  return matchesPattern || conversationalWeather;
+}
+
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 50,
@@ -113,7 +194,6 @@ app.get("/api/forecast", protect, async (req, res) => {
       });
     }
 
-    // fetching the 5-day / 3-hour forecast
     const forecastUrl = `https://api.openweathermap.org/data/2.5/forecast?lat=${lat}&lon=${lon}&units=metric&appid=${process.env.OPENWEATHER_API_KEY}`;
     const response = await fetch(forecastUrl);
     const forecastData = await response.json();
@@ -208,12 +288,10 @@ app.get("/api/climate", protect, async (req, res) => {
         .json({ error: "Restricted to Indian territories only." });
     }
 
-    // Calculating dates for the last 20 years
     const currentYear = new Date().getFullYear();
     const startDate = `${currentYear - 20}-01-01`;
     const endDate = `${currentYear - 1}-12-31`;
 
-    // Fetch from Open-Meteo
     const archiveUrl = `https://archive-api.open-meteo.com/v1/archive?latitude=${lat}&longitude=${lon}&start_date=${startDate}&end_date=${endDate}&daily=temperature_2m_mean&timezone=auto`;
 
     const response = await fetch(archiveUrl);
@@ -225,7 +303,6 @@ app.get("/api/climate", protect, async (req, res) => {
         .json({ error: "Failed to fetch historical data from Open-Meteo" });
     }
 
-    // compressing 20 years of daily data into yearly averages for the react chart
     const yearlyAverages = {};
     climateData.daily.time.forEach((date, index) => {
       const year = date.split("-")[0];
@@ -267,7 +344,6 @@ app.get("/api/history", protect, async (req, res) => {
   }
 });
 
-// socket auth middleware
 io.use((socket, next) => {
   const token = socket.handshake.auth.token;
 
@@ -277,7 +353,6 @@ io.use((socket, next) => {
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
     socket.userId = decoded.id;
     next();
   } catch (error) {
@@ -306,8 +381,19 @@ io.on("connection", (socket) => {
       });
     }
 
+    // FIX: Extract message and parameters FIRST before running the guardrail check
+    const { message, lat, lon, language = "English" } = data || {};
+
+    if (!message || !isWeatherOrTerm(message)) {
+      const genericReply =
+        "I am WeatherGPT, your dedicated AI weather assistant. I can only assist you with weather forecasts, meteorological data, climate trends, weather alerts, or explaining weather-related terms. Please ask me a weather-related question!";
+
+      socket.emit("receive_reply_chunk", { chunk: genericReply });
+      socket.emit("receive_reply_done", { reply: genericReply });
+      return;
+    }
+
     try {
-      const { message, lat, lon, language = "English" } = data;
       console.log(`Received from React: "${message}" (Language: ${language})`);
 
       const isWithinIndia =
@@ -341,7 +427,7 @@ io.on("connection", (socket) => {
 
       const systemInstruction = `
         You are WeatherGPT, an AI disaster management assistant for the Indian government.
-  
+ 
         User Message: "${message}"
         Target Language Preference: ${language}
         Official Location: ${locationContext} (Lat: ${lat}, Lon: ${lon})

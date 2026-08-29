@@ -44,10 +44,10 @@ export function ChatPanel({
   streaming,
   onLogin,
   language,
-  onStop, // 1. Added onStop prop
+  onStop,
 }) {
   const endRef = useRef(null);
-  const recognitionRef = useRef(null); // 2. Store mic instance to allow stopping
+  const recognitionRef = useRef(null);
   const [isRecording, setIsRecording] = useState(false);
 
   useEffect(() => {
@@ -71,7 +71,6 @@ export function ChatPanel({
     }
   };
 
-  // --- Voice to Text Handler ---
   const startVoiceInput = () => {
     const SpeechRecognition =
       window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -103,7 +102,7 @@ export function ChatPanel({
 
     recognition.onresult = (event) => {
       const transcript = event.results[0][0].transcript;
-      // Append spoken text to whatever is already typed in the input
+
       setInput((prev) => (prev ? `${prev} ${transcript}` : transcript));
     };
 
@@ -139,14 +138,6 @@ export function ChatPanel({
               : "Sign in to use live AI chat"}
           </p>
         </section>
-        <nav className="chat-head-actions">
-          <button type="button" aria-label="New chat">
-            ↶
-          </button>
-          <button type="button" aria-label="More options">
-            ⋮
-          </button>
-        </nav>
       </header>
 
       {/* Messages */}
