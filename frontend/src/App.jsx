@@ -98,8 +98,67 @@ function App() {
     }
   }
 
+  // Initial Location Detection (Checks Saved Location -> GPS -> Default Fallback)
   useEffect(() => {
-    loadLocation(defaultLocation);
+    const savedLoc = localStorage.getItem("weathergpt_location");
+    if (savedLoc) {
+      try {
+        const parsed = JSON.parse(savedLoc);
+        loadLocation(parsed);
+        return;
+      } catch (e) {
+        console.error("Error parsing saved location", e);
+      }
+    }
+
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        async (pos) => {
+          const { latitude, longitude } = pos.coords;
+          try {
+            const mapTilerKey =
+              import.meta.env.VITE_MAPTILER_API_KEY || "skvm1S2eynHwdOdazyId";
+            const res = await fetch(
+              `https://api.maptiler.com/geocoding/${longitude},${latitude}.json?key=${mapTilerKey}`,
+            );
+            const data = await res.json();
+
+            let cityName = "Current Location";
+            let countryName = "India";
+
+            if (data.features && data.features.length > 0) {
+              cityName = data.features[0].text || cityName;
+              const countryFeature = data.features.find((f) =>
+                f.place_type.includes("country"),
+              );
+              if (countryFeature) countryName = countryFeature.text;
+            }
+
+            const detectedLoc = {
+              name: cityName,
+              country: countryName,
+              latitude,
+              longitude,
+              timezone: "auto",
+            };
+
+            localStorage.setItem(
+              "weathergpt_location",
+              JSON.stringify(detectedLoc),
+            );
+            loadLocation(detectedLoc);
+          } catch (err) {
+            loadLocation(defaultLocation);
+          }
+        },
+        () => {
+          loadLocation(defaultLocation);
+        },
+        { timeout: 8000 },
+      );
+    } else {
+      loadLocation(defaultLocation);
+    }
   }, []);
 
   useEffect(() => {
@@ -199,6 +258,7 @@ function App() {
 
   async function handleLocationChange(place) {
     setMessages([]);
+    localStorage.setItem("weathergpt_location", JSON.stringify(place));
     await loadLocation(place);
   }
 
@@ -221,7 +281,7 @@ function App() {
       message: clean,
       lat: location.latitude,
       lon: location.longitude,
-      language: language, // Using the full language string directly
+      language: language,
     });
   }
 
@@ -296,7 +356,7 @@ function App() {
                     unit={unit}
                     onOpen={() => setActive("forecast")}
                   />
-                  <TrendCard />
+                  <TrendCard weather={weather} unit={unit} />
                 </div>
               </div>
               <ChatPanel
