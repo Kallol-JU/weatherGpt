@@ -43,6 +43,7 @@ export function ChatPanel({
   connected,
   streaming,
   onLogin,
+  language,
 }) {
   const endRef = useRef(null);
   const [isRecording, setIsRecording] = useState(false);

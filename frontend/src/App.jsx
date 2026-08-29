@@ -231,7 +231,7 @@ function App() {
       "5 day forecast": "How will the weather be for the next 5 days?",
       "Weather alerts": "Are there any weather warnings or alerts?",
     };
-    sendMessage(map[q] || q);
+    setInput(map[q] || q);
   }
 
   function selectHistory(text) {
