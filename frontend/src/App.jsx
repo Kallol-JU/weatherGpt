@@ -37,9 +37,18 @@ function App() {
   const [active, setActive] = useState("chat");
   const [location, setLocation] = useState(defaultLocation);
   const [weather, setWeather] = useState(null);
-  const [unit, setUnit] = useState("C");
-  const [language, setLanguage] = useState("EN");
-  const [dark, setDark] = useState(true);
+
+  // Settings initialized with LocalStorage for persistence
+  const [unit, setUnit] = useState(
+    () => localStorage.getItem("weathergpt_unit") || "C",
+  );
+  const [language, setLanguage] = useState(
+    () => localStorage.getItem("weathergpt_lang") || "English",
+  );
+  const [dark, setDark] = useState(
+    () => localStorage.getItem("weathergpt_dark") !== "false",
+  );
+
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [socket, setSocket] = useState(null);
@@ -48,6 +57,7 @@ function App() {
   const [authOpen, setAuthOpen] = useState(false);
   const [locationOpen, setLocationOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+
   const [user, setUser] = useState(() =>
     JSON.parse(localStorage.getItem("weathergpt_user") || "null"),
   );
@@ -60,7 +70,17 @@ function App() {
 
   const apiUrl = getApiUrl();
 
+  // Save settings to LocalStorage whenever they change
   useEffect(() => {
+    localStorage.setItem("weathergpt_lang", language);
+  }, [language]);
+
+  useEffect(() => {
+    localStorage.setItem("weathergpt_unit", unit);
+  }, [unit]);
+
+  useEffect(() => {
+    localStorage.setItem("weathergpt_dark", dark);
     document.documentElement.classList.toggle("dark", dark);
   }, [dark]);
 
@@ -201,7 +221,7 @@ function App() {
       message: clean,
       lat: location.latitude,
       lon: location.longitude,
-      language: languageName(language),
+      language: language, // Using the full language string directly
     });
   }
 
@@ -378,6 +398,7 @@ function LocationPage({ current, onChange }) {
     </section>
   );
 }
+
 function SettingsPage(props) {
   return (
     <section className="page-section">
@@ -405,11 +426,11 @@ function SettingsPage(props) {
             value={props.language}
             onChange={(e) => props.setLanguage(e.target.value)}
           >
-            <option value="EN">English</option>
-            <option value="HI">Hindi</option>
-            <option value="BN">Bengali</option>
-            <option value="TA">Tamil</option>
-            <option value="TE">Telugu</option>
+            <option value="English">English</option>
+            <option value="Hindi">Hindi</option>
+            <option value="Bengali">Bengali</option>
+            <option value="Tamil">Tamil</option>
+            <option value="Telugu">Telugu</option>
           </select>
         </div>
         <div>
@@ -443,18 +464,12 @@ function SettingsPage(props) {
     </section>
   );
 }
+
 function nowTime() {
   return new Date().toLocaleTimeString([], {
     hour: "numeric",
     minute: "2-digit",
   });
-}
-function languageName(code) {
-  return (
-    { EN: "English", HI: "Hindi", BN: "Bengali", TA: "Tamil", TE: "Telugu" }[
-      code
-    ] || "English"
-  );
 }
 
 export default App;
