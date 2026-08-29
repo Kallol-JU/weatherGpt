@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import ReactMarkdown from "react-markdown";
 
 function ChatMessage({ message }) {
   const isAssistant = message.role === "assistant";
@@ -8,10 +9,10 @@ function ChatMessage({ message }) {
       {isAssistant && <span className="bot-avatar">●</span>}
 
       <section>
-        <p className="bubble">
-          {message.text}
+        <div className="bubble">
+          <ReactMarkdown>{message.text}</ReactMarkdown>
           {message.streaming && <span className="typing-caret" />}
-        </p>
+        </div>
 
         {message.time && <time>{message.time}</time>}
       </section>
@@ -71,7 +72,6 @@ export function ChatPanel({
 
   return (
     <aside className="chat-panel">
-
       {/* Header */}
       <header className="chat-head">
         <span className="ai-logo">✦</span>
@@ -105,52 +105,42 @@ export function ChatPanel({
             <span>✦</span>
             <h3>How can I help?</h3>
             <p>
-              Ask me about weather, forecasts, warnings,
-              climate, or local advice.
+              Ask me about weather, forecasts, warnings, climate, or local
+              advice.
             </p>
           </section>
         ) : (
           messages.map((message, index) => (
-            <ChatMessage
-              key={`${message.role}-${index}`}
-              message={message}
-            />
+            <ChatMessage key={`${message.role}-${index}`} message={message} />
           ))
         )}
 
-        {streaming &&
-          messages[messages.length - 1]?.role !== "assistant" && (
-            <TypingIndicator />
-          )}
+        {streaming && messages[messages.length - 1]?.role !== "assistant" && (
+          <TypingIndicator />
+        )}
 
         <span ref={endRef} />
       </main>
 
       {/* Quick actions */}
       <nav className="chat-quick" aria-label="Quick questions">
-        {[
-          "Current weather",
-          "5 day forecast",
-          "Weather alerts",
-        ].map((question) => (
-          <button
-            key={question}
-            type="button"
-            onClick={() => onQuick(question)}
-            disabled={streaming}
-          >
-            {question}
-          </button>
-        ))}
+        {["Current weather", "5 day forecast", "Weather alerts"].map(
+          (question) => (
+            <button
+              key={question}
+              type="button"
+              onClick={() => onQuick(question)}
+              disabled={streaming}
+            >
+              {question}
+            </button>
+          ),
+        )}
       </nav>
 
       {/* Input */}
       <form className="chat-input" onSubmit={submit}>
-        <button
-          type="button"
-          className="mic"
-          aria-label="Voice input"
-        >
+        <button type="button" className="mic" aria-label="Voice input">
           🎙️
         </button>
 
@@ -174,11 +164,7 @@ export function ChatPanel({
       </form>
 
       {!connected && (
-        <button
-          className="login-hint"
-          type="button"
-          onClick={onLogin}
-        >
+        <button className="login-hint" type="button" onClick={onLogin}>
           Sign in to unlock the live WeatherGPT assistant
         </button>
       )}
@@ -186,7 +172,6 @@ export function ChatPanel({
       <p className="chat-disclaimer">
         WeatherGPT can make mistakes. Please verify important information.
       </p>
-
     </aside>
   );
 }

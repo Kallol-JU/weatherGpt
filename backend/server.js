@@ -78,7 +78,7 @@ app.post("/api/weather-insight", async (req, res) => {
     `;
 
     const aiResponse = await ai.models.generateContent({
-      model: "gemini-3.5-flash",
+      model: "gemini-3.6-flash",
       contents: prompt,
     });
 
@@ -173,7 +173,7 @@ app.get("/api/advisory", protect, async (req, res) => {
     `;
 
     const aiResponse = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
+      model: "gemini-3.6-flash",
       contents: prompt,
     });
 
@@ -335,19 +335,25 @@ io.on("connection", (socket) => {
 
       const systemInstruction = `
         You are WeatherGPT, an AI disaster management assistant for the Indian government.
-        The user asked: "${message}"
-        Official Location: ${locationContext} (Lat: ${lat}, Lon: ${lon}).
-        Live Meteorological Data: ${JSON.stringify(weatherData)}
-        
-        Rules:
-        - Analyze the weather data and answer briefly.
-        - Use Indian Meteorological Department (IMD) terminology (e.g., use "Cyclonic Storm" instead of "Hurricane").
-        - If conditions are severe, advise citizens to contact the NDMA helpline at 1078.
-        - YOU MUST RESPOND IN THIS LANGUAGE: ${language}.
-      `;
+  
+  User Message: "${message}"
+  Target Language Preference: ${language}
+  Official Location: ${locationContext} (Lat: ${lat}, Lon: ${lon})
+  Live Meteorological Data: ${JSON.stringify(weatherData)}
+  
+  LANGUAGE RULES:
+  - You MUST respond fluently in the language requested by the user.
+  - If the user explicitly asks to write in a specific language inside their message (e.g., "write in Bengali"), OVERRIDE the Target Language Preference and respond ENTIRELY in that requested language.
+  - NEVER output disclaimers saying responses are restricted to English.
+  
+  SAFETY & TERMINOLOGY:
+  - Analyze the weather data and respond concisely.
+  - Use Indian Meteorological Department (IMD) terminology.
+  - If weather conditions are severe, advise citizens to call the NDMA helpline at 1078.
+`;
 
       const streamResult = await ai.models.generateContentStream({
-        model: "gemini-2.5-flash",
+        model: "gemini-3.6-flash",
         contents: systemInstruction,
       });
 
