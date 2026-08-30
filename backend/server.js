@@ -4,11 +4,6 @@ import { Server } from "socket.io";
 import cors from "cors";
 import dotenv from "dotenv";
 import mongoose from "mongoose";
-<<<<<<< Updated upstream
-
-// import { GoogleGenAI } from "@google/genai";
-=======
-import dns from "node:dns";
 import { GoogleGenAI } from "@google/genai";
 import Chat from "./models/Chat.js";
 import rateLimit from "express-rate-limit";
@@ -17,8 +12,7 @@ import authRoutes from "./routes/auth.js";
 import { protect } from "./middleware/auth.js";
 import jwt from "jsonwebtoken";
 import userRoutes from "./routes/user.js";
->>>>>>> Stashed changes
-
+import dns from "node:dns";
 dotenv.config();
 
 const app = express();
@@ -26,17 +20,10 @@ app.use(cors());
 app.use(express.json());
 
 const httpServer = createServer(app);
+const io = new Server(httpServer, { cors: { origin: "*" } });
 
-<<<<<<< Updated upstream
-const io = new Server(httpServer, {
-  cors: {
-    origin: "http://localhost:5173", // frontend port no
-    methods: ["GET", "POST"],
-  },
-=======
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 dns.setServers(["1.1.1.1"]);
-
 mongoose
   .connect(process.env.MONGO_URI)
   .then(() => console.log("Successfully connected to MongoDB!"))
@@ -186,6 +173,49 @@ app.post("/api/weather-insight", async (req, res) => {
   } catch (error) {
     console.error("Pipeline Error:", error);
     res.status(500).json({ error: "Failed to generate weather insight" });
+  }
+});
+
+app.get("/api/current-weather", async (req, res) => {
+  try {
+    const { lat, lon } = req.query;
+
+    if (lat === undefined || lon === undefined) {
+      return res
+        .status(400)
+        .json({ error: "Latitude and longitude are required." });
+    }
+
+    const latitude = Number(lat);
+    const longitude = Number(lon);
+
+    if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+      return res.status(400).json({ error: "Invalid latitude or longitude." });
+    }
+
+    const isWithinIndia =
+      latitude >= 8.4 && latitude <= 37.6 && longitude >= 68.7 && longitude <= 97.25;
+
+    if (!isWithinIndia) {
+      return res.status(403).json({
+        error: "Weather data is restricted to Indian territories only.",
+      });
+    }
+
+    const weatherUrl = `https://api.openweathermap.org/data/2.5/weather?lat=${latitude}&lon=${longitude}&units=metric&appid=${process.env.OPENWEATHER_API_KEY}`;
+    const response = await fetch(weatherUrl);
+    const weatherData = await response.json();
+
+    if (weatherData.cod && Number(weatherData.cod) !== 200) {
+      return res
+        .status(Number(weatherData.cod))
+        .json({ error: weatherData.message || "Weather API error." });
+    }
+
+    res.json({ success: true, weather: weatherData });
+  } catch (error) {
+    console.error("Current Weather API Error:", error);
+    res.status(500).json({ error: "Failed to fetch current weather data." });
   }
 });
 
@@ -371,23 +401,135 @@ io.use((socket, next) => {
   } catch (error) {
     return next(new Error("Authentication error: Invalid token"));
   }
->>>>>>> Stashed changes
 });
 
 io.on("connection", (socket) => {
   console.log(`User connected: ${socket.id}`);
 
+  socket.on("stop_prompt", () => {
+    socket.stopStream = true;
+  });
+
   socket.on("send_prompt", async (data) => {
-    console.log("Received from React:", data.message);
+    socket.stopStream = false;
 
-    // TODO: Step 1. Fetch weather data from Open-Meteo API using data.lat/lon
-    // TODO: Step 2. Send data.message + weather JSON to the LLM
+    try {
+      if (typeof socketLimiter !== "undefined") {
+        await socketLimiter.consume(socket.handshake.address);
+      }
+    } catch (rejRes) {
+      return socket.emit("receive_reply_done", {
+        reply:
+          "Rate limit reached. Please wait a minute before sending another prompt.",
+      });
+    }
 
-    // For now, let's just echo it back to test the connection
-    const fakeAiResponse = `Server received your message: "${data.message}". AI integration pending!`;
+    // FIX: Extract message and parameters FIRST before running the guardrail check
+    const { message, lat, lon, language = "English" } = data || {};
 
-    // Emit the answer back to the frontend
-    socket.emit("receive_reply", { reply: fakeAiResponse });
+    if (!message || !isWeatherOrTerm(message)) {
+      const genericReply =
+        "I am WeatherGPT, your dedicated AI weather assistant. I can only assist you with weather forecasts, meteorological data, climate trends, weather alerts, or explaining weather-related terms. Please ask me a weather-related question!";
+
+      socket.emit("receive_reply_chunk", { chunk: genericReply });
+      socket.emit("receive_reply_done", { reply: genericReply });
+      return;
+    }
+
+    try {
+      console.log(`Received from React: "${message}" (Language: ${language})`);
+
+      const isWithinIndia =
+        lat >= 8.4 && lat <= 37.6 && lon >= 68.7 && lon <= 97.25;
+      if (!isWithinIndia) {
+        return socket.emit("receive_reply_done", {
+          reply: "Error: This portal is restricted to Indian territories only.",
+        });
+      }
+
+      const mapTilerUrl = `https://api.maptiler.com/geocoding/${lon},${lat}.json?key=${process.env.MAPTILER_API_KEY}`;
+      const geoRes = await fetch(mapTilerUrl);
+      const geoData = await geoRes.json();
+
+      let locationContext = "India";
+      if (geoData.features && geoData.features.length > 0) {
+        const bestMatch = geoData.features[0];
+        const state =
+          geoData.features.find((f) => f.place_type.includes("region"))?.text ||
+          "";
+        locationContext = `${bestMatch.text}, ${state}`.trim();
+      }
+
+      const weatherUrl = `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&units=metric&appid=${process.env.OPENWEATHER_API_KEY}`;
+      const weatherRes = await fetch(weatherUrl);
+      const weatherData = await weatherRes.json();
+
+      if (weatherData.cod && weatherData.cod !== 200) {
+        throw new Error(weatherData.message || "Weather API Error");
+      }
+
+      const systemInstruction = `
+        You are WeatherGPT, an AI disaster management assistant for the Indian government.
+ 
+        User Message: "${message}"
+        Target Language Preference: ${language}
+        Official Location: ${locationContext} (Lat: ${lat}, Lon: ${lon})
+        Live Meteorological Data: ${JSON.stringify(weatherData)}
+        
+        LANGUAGE RULES:
+        - You MUST respond fluently in the language requested by the user.
+        - If the user explicitly asks to write in a specific language inside their message (e.g., "write in Bengali"), OVERRIDE the Target Language Preference and respond ENTIRELY in that requested language.
+        - NEVER output disclaimers saying responses are restricted to English.
+        
+        SAFETY & TERMINOLOGY:
+        - Analyze the weather data and respond concisely.
+        - Use Indian Meteorological Department (IMD) terminology.
+        - If weather conditions are severe, advise citizens to call the NDMA helpline at 1078.
+      `;
+
+      const streamResult = await ai.models.generateContentStream({
+        model: "gemini-3.6-flash",
+        contents: systemInstruction,
+      });
+
+      let finalAnswer = "";
+
+      for await (const chunk of streamResult) {
+        if (socket.stopStream) {
+          console.log(`Stream aborted by user: ${socket.id}`);
+          break;
+        }
+
+        const chunkText = chunk.text;
+        if (chunkText) {
+          finalAnswer += chunkText;
+          socket.emit("receive_reply_chunk", { chunk: chunkText });
+        }
+      }
+
+      socket.emit("receive_reply_done", { reply: finalAnswer });
+
+      await Chat.findOneAndUpdate(
+        { userId: socket.userId },
+        {
+          $set: { location: { lat, lon } },
+          $push: {
+            history: {
+              $each: [
+                { role: "user", message: message },
+                { role: "model", message: finalAnswer },
+              ],
+            },
+          },
+        },
+        { upsert: true, returnDocument: "after" },
+      );
+    } catch (error) {
+      console.error("AI Routing Error:", error);
+      socket.emit("receive_reply_done", {
+        reply: "Error processing the weather data. Please try again.",
+      });
+    }
   });
 
   socket.on("disconnect", () => {
@@ -395,12 +537,7 @@ io.on("connection", (socket) => {
   });
 });
 
-mongoose
-  .connect(process.env.MONGO_URI)
-  .then(() => console.log("Successfully connected to MongoDB!"))
-  .catch((err) => console.error("MongoDB connection error:", err));
-
 const PORT = process.env.PORT || 5000;
-httpServer.listen(PORT, () => {
-  console.log(`WeatherGPT server running on port ${PORT}`);
-});
+httpServer.listen(PORT, () =>
+  console.log(`WeatherGPT server running on port ${PORT}`),
+);

@@ -1,16 +1,61 @@
-# React + Vite
+# WeatherGPT Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+This frontend is designed around the provided WeatherGPT backend without modifying the backend code.
 
-Currently, two official plugins are available:
+## Run
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+Open this folder in VS Code:
 
-## React Compiler
+```text
+WeatherGPT-Neumorphic-Full-Frontend/
+└── frontend/
+```
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+Install and run:
 
-## Expanding the Oxlint configuration
+```powershell
+npm.cmd install
+npm.cmd run dev
+```
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and Oxlint's TypeScript related rules in your project.
+## Backend connection
+
+Create `frontend/.env`:
+
+```env
+VITE_API_URL=http://localhost:5000
+```
+
+Use the same port configured by `backend/.env` (`PORT`).
+
+Start the backend separately:
+
+```powershell
+cd ..\backend
+npm.cmd install
+node server.js
+```
+
+## What is connected
+
+- `POST /api/auth/login`
+- `POST /api/auth/register`
+- `GET /api/history` with Bearer token
+- Socket.IO `send_prompt`
+- Socket.IO `receive_reply_chunk`
+- Socket.IO `receive_reply_done`
+- Browser-side geocoding + Open-Meteo forecast for dashboard visualizations
+
+The backend was intentionally left unchanged.
+
+## Important backend environment
+
+The supplied backend code reads these values:
+
+- `PORT`
+- `GEMINI_API_KEY`
+- `MONGO_URI`
+- `JWT_SECRET`
+- `OPENWEATHER_API_KEY`
+
+Keep these secrets in `backend/.env`, never in the React frontend.

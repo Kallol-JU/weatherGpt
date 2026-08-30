@@ -4,7 +4,8 @@
   "type": "module",
   "main": "server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node server.js",
+    "dev": "nodemon server.js"
   },
   "keywords": [],
   "author": "Kallol , Irfan , Priya, Riya , Akash , Manik",
@@ -12,10 +13,19 @@
   "description": "",
   "dependencies": {
     "@google/genai": "^2.19.0",
+    "bcryptjs": "^3.0.3",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
+    "express-rate-limit": "^8.6.2",
+    "i": "^0.3.7",
+    "jsonwebtoken": "^9.0.3",
     "mongoose": "^9.9.4",
-    "socket.io": "^4.8.3"
+    "rate-limiter-flexible": "^11.2.0",
+    "socket.io": "^4.8.3",
+    "socket.io-client": "^4.8.3"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.14"
   }
 }

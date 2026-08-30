@@ -1,0 +1,16 @@
+{
+  "expo": {
+    "name": "WeatherGPT",
+    "slug": "weathergpt",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "android": {
+      "package": "com.weathergpt.mobile"
+    },
+    "ios": {
+      "bundleIdentifier": "com.weathergpt.mobile"
+    }
+  }
+}

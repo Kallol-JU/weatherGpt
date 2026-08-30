@@ -1,0 +1,5 @@
+import React from 'react'
+import { Text, TouchableOpacity, View, StyleSheet } from 'react-native'
+import { colors } from '../theme/colors'
+export function BottomNav({active,onChange}) { const items=[['chat','✦','Chat'],['forecast','☁️','Forecast'],['alerts','⚠️','Alerts'],['advisory','🌾','Advice'],['settings','⚙️','More']]; return <View style={styles.bar}>{items.map(([key,icon,label])=><TouchableOpacity key={key} onPress={()=>onChange(key)} style={[styles.item,active===key&&styles.active]}><Text style={styles.icon}>{icon}</Text><Text style={[styles.label,active===key&&styles.activeText]}>{label}</Text></TouchableOpacity>)}</View> }
+const styles=StyleSheet.create({bar:{height:72,backgroundColor:colors.surface,borderTopWidth:1,borderTopColor:colors.line,flexDirection:'row',alignItems:'center',justifyContent:'space-around',paddingHorizontal:4},item:{minWidth:58,alignItems:'center',paddingVertical:7,borderRadius:14},active:{backgroundColor:colors.raised},icon:{fontSize:18},label:{fontSize:10,color:colors.muted,marginTop:3,fontWeight:'700'},activeText:{color:colors.blue2}})
