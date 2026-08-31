@@ -38,7 +38,6 @@ function App() {
   const [location, setLocation] = useState(defaultLocation);
   const [weather, setWeather] = useState(null);
 
-  // Settings initialized with LocalStorage for persistence
   const [unit, setUnit] = useState(
     () => localStorage.getItem("weathergpt_unit") || "C",
   );
@@ -70,7 +69,6 @@ function App() {
 
   const apiUrl = getApiUrl();
 
-  // Save settings to LocalStorage whenever they change
   useEffect(() => {
     localStorage.setItem("weathergpt_lang", language);
   }, [language]);
@@ -98,7 +96,6 @@ function App() {
     }
   }
 
-  // Initial Location Detection (Checks Saved Location -> GPS -> Default Fallback)
   useEffect(() => {
     const savedLoc = localStorage.getItem("weathergpt_location");
     if (savedLoc) {
@@ -287,7 +284,6 @@ function App() {
 
   function stopGeneration() {
     setStreaming(false);
-
     if (socket) {
       socket.emit("stop_prompt");
     }
@@ -336,10 +332,12 @@ function App() {
           onLogout={logout}
         />
         {weatherError && <div className="inline-error">{weatherError}</div>}
+
         <div className="dashboard">
           {active === "chat" && (
-            <>
-              <div className="dashboard-main">
+            <div className="chat-layout-grid">
+              {/* Left/Top Column: Weather Context Widgets */}
+              <div className="weather-widgets-column">
                 <div className="dashboard-welcome">
                   <div>
                     <span className="eyebrow">
@@ -370,20 +368,25 @@ function App() {
                   <TrendCard weather={weather} unit={unit} />
                 </div>
               </div>
-              <ChatPanel
-                messages={messages}
-                input={input}
-                setInput={setInput}
-                onSend={sendMessage}
-                onQuick={handleQuick}
-                connected={connected}
-                streaming={streaming}
-                onLogin={() => setAuthOpen(true)}
-                language={language}
-                onStop={stopGeneration}
-              />
-            </>
+
+              {/* Right/Bottom Column: Primary AI Interface */}
+              <div className="chat-panel-column">
+                <ChatPanel
+                  messages={messages}
+                  input={input}
+                  setInput={setInput}
+                  onSend={sendMessage}
+                  onQuick={handleQuick}
+                  connected={connected}
+                  streaming={streaming}
+                  onLogin={() => setAuthOpen(true)}
+                  language={language}
+                  onStop={stopGeneration}
+                />
+              </div>
+            </div>
           )}
+
           {active === "forecast" && (
             <FullForecast weather={weather} unit={unit} />
           )}
@@ -417,6 +420,7 @@ function App() {
           {active === "about" && <About />}
         </div>
       </main>
+
       {authOpen && (
         <AuthModal onClose={() => setAuthOpen(false)} onAuth={handleAuth} />
       )}

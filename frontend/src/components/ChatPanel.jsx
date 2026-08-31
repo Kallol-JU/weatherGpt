@@ -191,7 +191,7 @@ export function ChatPanel({
           onClick={() => {
             if (!connected) {
               alert("Sign in to use voice and location features.");
-              if (onLogin) onLogin(); // Pops open the Auth modal
+              if (onLogin) onLogin();
               return;
             }
             isRecording ? stopVoiceInput() : startVoiceInput();
