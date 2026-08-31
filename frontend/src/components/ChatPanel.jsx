@@ -83,7 +83,7 @@ export function ChatPanel({
     }
 
     const recognition = new SpeechRecognition();
-    recognitionRef.current = recognition; // Save instance to ref
+    recognitionRef.current = recognition;
     recognition.interimResults = false;
 
     const langCodes = {
@@ -102,7 +102,6 @@ export function ChatPanel({
 
     recognition.onresult = (event) => {
       const transcript = event.results[0][0].transcript;
-
       setInput((prev) => (prev ? `${prev} ${transcript}` : transcript));
     };
 
@@ -117,6 +116,7 @@ export function ChatPanel({
 
     recognition.start();
   };
+
   const stopVoiceInput = () => {
     if (recognitionRef.current) {
       recognitionRef.current.stop();
@@ -135,7 +135,7 @@ export function ChatPanel({
             <i className={connected ? "online" : "offline"} />
             {connected
               ? "Your AI Weather Assistant"
-              : "Sign in to use live AI chat"}
+              : "Live AI Weather Assistant"}
           </p>
         </section>
       </header>
@@ -185,12 +185,23 @@ export function ChatPanel({
           type="button"
           className={`mic ${isRecording ? "recording" : ""}`}
           aria-label="Voice input"
-          // 3. Toggle start/stop based on recording state
-          onClick={isRecording ? stopVoiceInput : startVoiceInput}
-          disabled={streaming} // Removed isRecording from disabled logic
+          title={
+            !connected ? "Sign in to use voice features" : "Use microphone"
+          }
+          onClick={() => {
+            if (!connected) {
+              alert("Sign in to use voice and location features.");
+              if (onLogin) onLogin(); // Pops open the Auth modal
+              return;
+            }
+            isRecording ? stopVoiceInput() : startVoiceInput();
+          }}
+          disabled={streaming}
           style={{
             color: isRecording ? "#ff4757" : "inherit",
             animation: isRecording ? "pulse 1.5s infinite" : "none",
+            opacity: !connected ? 0.5 : 1,
+            cursor: !connected ? "not-allowed" : "pointer",
           }}
         >
           {isRecording ? "◼" : "🎙️"}
@@ -207,7 +218,6 @@ export function ChatPanel({
           disabled={streaming}
         />
 
-        {/* 4. Swap Send icon for Stop icon when generating */}
         {streaming ? (
           <button
             className="send stop-btn"
@@ -230,11 +240,6 @@ export function ChatPanel({
         )}
       </form>
 
-      {!connected && (
-        <button className="login-hint" type="button" onClick={onLogin}>
-          Sign in to unlock the live WeatherGPT assistant
-        </button>
-      )}
       <p className="chat-disclaimer">
         WeatherGPT can make mistakes. Please verify important information.
       </p>

@@ -28,10 +28,11 @@ export function login(email, password) {
   });
 }
 
-export function register(name, email, password) {
+export function register(name, email, password, phone) {
   return request("/api/auth/register", {
     method: "POST",
-    body: JSON.stringify({ name, email, password }),
+    // Fixed: phone is now included in the payload sent to the backend
+    body: JSON.stringify({ name, email, password, phone }),
   });
 }
 

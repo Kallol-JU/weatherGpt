@@ -3,18 +3,20 @@ import Twilio from "twilio";
 import webPush from "web-push";
 import User from "../models/User.js";
 
-const twilioClient = Twilio(
-  process.env.TWILIO_SID,
-  process.env.TWILIO_AUTH_TOKEN,
-);
-
-webPush.setVapidDetails(
-  process.env.VAPID_EMAIL,
-  process.env.VAPID_PUBLIC_KEY,
-  process.env.VAPID_PRIVATE_KEY,
-);
-
 export function initAlertWorker() {
+  // 1. Initialize API clients inside the function AFTER .env is loaded
+  const twilioClient = Twilio(
+    process.env.TWILIO_SID,
+    process.env.TWILIO_AUTH_TOKEN,
+  );
+
+  webPush.setVapidDetails(
+    process.env.VAPID_EMAIL || "mailto:admin@weathergpt.com", // Added a fallback just in case
+    process.env.VAPID_PUBLIC_KEY,
+    process.env.VAPID_PRIVATE_KEY,
+  );
+
+  // 2. Start the cron job
   cron.schedule("*/15 * * * *", async () => {
     console.log("🔍 Running weather alert check...");
     try {
@@ -42,7 +44,7 @@ export function initAlertWorker() {
         if (maxRainProb >= 85 || maxWind > 55) {
           const alertMessage = `⚠️ [WeatherGPT Alert] Severe weather expected in ${locationName} within 2-3 hours! Rain chance: ${maxRainProb}%, Max wind: ${maxWind} km/h.`;
 
-          // 1. Send SMS via Twilio
+          // SMS
           if (user.alertSettings.smsEnabled && user.phone) {
             try {
               await twilioClient.messages.create({
@@ -56,7 +58,7 @@ export function initAlertWorker() {
             }
           }
 
-          // 2. Send Browser Web Push
+          // Push Notification
           if (user.alertSettings.pushEnabled && user.pushSubscription) {
             try {
               const payload = JSON.stringify({

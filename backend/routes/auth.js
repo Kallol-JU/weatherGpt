@@ -7,7 +7,7 @@ const router = express.Router();
 
 router.post("/register", async (req, res) => {
   try {
-    const { name, email, password } = req.body;
+    const { name, email, password, phone } = req.body;
 
     if (!name || !email || !password) {
       return res.status(400).json({ error: "All fields are required" });
@@ -21,7 +21,14 @@ router.post("/register", async (req, res) => {
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
-    const user = await User.create({ name, email, password: hashedPassword });
+
+    // Fixed: Added phone to the database creation object
+    const user = await User.create({
+      name,
+      email,
+      password: hashedPassword,
+      phone,
+    });
 
     const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
       expiresIn: "7d",
@@ -30,7 +37,13 @@ router.post("/register", async (req, res) => {
     res.status(201).json({
       success: true,
       token,
-      user: { id: user._id, name: user.name, email: user.email },
+      // Fixed: Return phone to the frontend
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+      },
     });
   } catch (error) {
     console.error("Register Error:", error);
@@ -63,7 +76,12 @@ router.post("/login", async (req, res) => {
     res.json({
       success: true,
       token,
-      user: { id: user._id, name: user.name, email: user.email },
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+      },
     });
   } catch (error) {
     console.error("Login Error:", error);

@@ -331,6 +331,9 @@ function App() {
           setLanguage={setLanguage}
           onProfile={() => setSettingsOpen(true)}
           mobileMenu={() => setActive(active === "chat" ? "forecast" : "chat")}
+          user={user}
+          onLogin={() => setAuthOpen(true)}
+          onLogout={logout}
         />
         {weatherError && <div className="inline-error">{weatherError}</div>}
         <div className="dashboard">

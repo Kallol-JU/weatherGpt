@@ -17,11 +17,26 @@ import { initAlertWorker } from "./services/alertWorker.js";
 dotenv.config();
 
 const app = express();
-app.use(cors());
+
+// Updated CORS middleware to support cross-origin requests from Vercel
+app.use(
+  cors({
+    origin: "*",
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  }),
+);
+
 app.use(express.json());
 
 const httpServer = createServer(app);
-const io = new Server(httpServer, { cors: { origin: "*" } });
+
+// Updated Socket.io CORS configuration
+const io = new Server(httpServer, {
+  cors: {
+    origin: "*",
+    methods: ["GET", "POST"],
+  },
+});
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
@@ -385,7 +400,6 @@ io.on("connection", (socket) => {
       });
     }
 
-    // FIX: Extract message and parameters FIRST before running the guardrail check
     const { message, lat, lon, language = "English" } = data || {};
 
     if (!message || !isWeatherOrTerm(message)) {

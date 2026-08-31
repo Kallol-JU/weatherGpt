@@ -6,8 +6,10 @@ export function AuthModal({ onClose, onAuth }) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [phone, setPhone] = useState(""); // Added phone state
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
   async function submit(e) {
     e.preventDefault();
     setLoading(true);
@@ -16,7 +18,8 @@ export function AuthModal({ onClose, onAuth }) {
       const data =
         mode === "login"
           ? await login(email, password)
-          : await register(name, email, password);
+          : // Pass phone to the register function
+            await register(name, email, password, phone);
       onAuth(data);
     } catch (err) {
       setError(err.message);
@@ -24,6 +27,7 @@ export function AuthModal({ onClose, onAuth }) {
       setLoading(false);
     }
   }
+
   return (
     <div className="modal-layer" onMouseDown={onClose}>
       <div className="auth-card" onMouseDown={(e) => e.stopPropagation()}>
@@ -37,16 +41,25 @@ export function AuthModal({ onClose, onAuth }) {
         <p>
           {mode === "login"
             ? "Sign in to use live AI weather chat and history."
-            : "Your account keeps your conversations available across sessions."}
+            : "Sign up to access AI features and receive emergency SMS weather alerts."}
         </p>
         <form onSubmit={submit}>
           {mode === "register" && (
-            <input
-              placeholder="Your name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              required
-            />
+            <>
+              <input
+                placeholder="Your name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                required
+              />
+              <input
+                type="tel"
+                placeholder="Phone Number (e.g., +919876543210)"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                required
+              />
+            </>
           )}
           <input
             type="email"
