@@ -12,6 +12,7 @@ import authRoutes from "./routes/auth.js";
 import { protect } from "./middleware/auth.js";
 import jwt from "jsonwebtoken";
 import userRoutes from "./routes/user.js";
+import { initAlertWorker } from "./services/alertWorker.js";
 
 dotenv.config();
 
@@ -26,7 +27,10 @@ const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
 mongoose
   .connect(process.env.MONGO_URI)
-  .then(() => console.log("Successfully connected to MongoDB!"))
+  .then(() => {
+    console.log("Successfully connected to MongoDB!");
+    initAlertWorker();
+  })
   .catch((err) => console.error("MongoDB connection error:", err));
 
 function isWeatherOrTerm(text) {
