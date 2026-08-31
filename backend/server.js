@@ -17,7 +17,7 @@ import { initAlertWorker } from "./services/alertWorker.js";
 dotenv.config();
 
 const app = express();
-
+app.set("trust proxy", 1);
 // Updated CORS middleware to support cross-origin requests from Vercel
 app.use(
   cors({
