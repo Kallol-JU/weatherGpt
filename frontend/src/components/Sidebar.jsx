@@ -23,7 +23,7 @@ export function Sidebar({ active, setActive, location, unit, setUnit, dark, setD
         {items.map(([id, icon, label]) => (
           <button key={id} className={`side-item ${active === id ? 'active' : ''}`} onClick={() => setActive(id)}>
             <Icon>{icon}</Icon><span>{label}</span>
-            {id === 'alerts' && <b className="nav-badge">2</b>}
+            {id === 'alerts' }
           </button>
         ))}
       </nav>
