@@ -309,8 +309,10 @@ function App() {
 
   const greeting = useMemo(() => {
     const h = new Date().getHours();
-    return h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening";
-  }, []);
+    const timeGreeting =
+      h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening";
+    return user?.name ? `${timeGreeting}, ${user.name}` : timeGreeting;
+  }, [user]);
 
   return (
     <div className={`app-shell ${dark ? "theme-dark" : "theme-light"}`}>
