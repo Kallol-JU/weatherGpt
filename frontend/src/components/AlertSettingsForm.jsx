@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { subscribeUserToPush } from "../utils/push";
+import { getApiUrl } from "../services/api";
 
 export function AlertSettingsForm({ authToken, location }) {
   const [phone, setPhone] = useState("");
@@ -8,13 +9,18 @@ export function AlertSettingsForm({ authToken, location }) {
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState("");
 
-  // Optional: Fetch existing settings on load to pre-fill the form
+  const apiUrl = getApiUrl();
+  const token =
+    authToken ||
+    localStorage.getItem("weathergpt_token") ||
+    localStorage.getItem("token");
+
   useEffect(() => {
     async function loadSettings() {
-      if (!authToken) return;
+      if (!token) return;
       try {
-        const res = await fetch("/api/user/settings", {
-          headers: { Authorization: `Bearer ${authToken}` },
+        const res = await fetch(`${apiUrl}/api/user/settings`, {
+          headers: { Authorization: `Bearer ${token}` },
         });
         const data = await res.json();
         if (data.success) {
@@ -27,33 +33,38 @@ export function AlertSettingsForm({ authToken, location }) {
       }
     }
     loadSettings();
-  }, [authToken]);
+  }, [token, apiUrl]);
 
   const handleSaveAlertSettings = async (e) => {
     e.preventDefault();
+
+    if (!token) {
+      setMessage("❌ Please sign in to save preferences.");
+      return;
+    }
+
     setIsSaving(true);
     setMessage("");
 
     try {
       let pushSubscription = null;
 
-      // Request browser push permissions if enabled
       if (pushEnabled) {
         pushSubscription = await subscribeUserToPush();
       }
 
-      const response = await fetch("/api/user/alert-settings", {
+      const response = await fetch(`${apiUrl}/api/user/alert-settings`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${authToken}`,
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           phone,
           alertSettings: {
             smsEnabled,
             pushEnabled,
-            thunderstorm: true, // You can add individual UI toggles for these later
+            thunderstorm: true,
             heavyRain: true,
           },
           pushSubscription,
@@ -67,10 +78,11 @@ export function AlertSettingsForm({ authToken, location }) {
       });
 
       const result = await response.json();
-      if (result.success) {
+
+      if (response.ok && result.success) {
         setMessage("✅ Alert settings saved successfully!");
       } else {
-        setMessage("❌ Failed to save settings.");
+        setMessage(`❌ ${result.error || "Failed to save settings."}`);
       }
     } catch (error) {
       setMessage("❌ Network error occurred.");

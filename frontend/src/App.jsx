@@ -61,7 +61,10 @@ function App() {
     JSON.parse(localStorage.getItem("weathergpt_user") || "null"),
   );
   const [token, setToken] = useState(
-    () => localStorage.getItem("weathergpt_token") || "",
+    () =>
+      localStorage.getItem("weathergpt_token") ||
+      localStorage.getItem("token") ||
+      "",
   );
   const [history, setHistory] = useState([]);
   const [loadingWeather, setLoadingWeather] = useState(true);
@@ -245,6 +248,7 @@ function App() {
   function logout() {
     socket?.disconnect();
     localStorage.removeItem("weathergpt_token");
+    localStorage.removeItem("token");
     localStorage.removeItem("weathergpt_user");
     setToken("");
     setUser(null);
@@ -391,7 +395,12 @@ function App() {
             <FullForecast weather={weather} unit={unit} />
           )}
           {active === "maps" && <Maps location={location} />}
-          {active === "alerts" && <Alerts location={location} />}
+
+          {/* FIXED: Passed authToken/token down to Alerts component */}
+          {active === "alerts" && (
+            <Alerts location={location} weather={weather} authToken={token} />
+          )}
+
           {active === "advisory" && (
             <Advisories location={location} onAsk={sendMessage} />
           )}

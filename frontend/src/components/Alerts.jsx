@@ -1,15 +1,18 @@
 import { AlertSettingsForm } from "./AlertSettingsForm";
 
 export function Alerts({ location, weather, authToken }) {
-  // Retrieve token from props or localStorage fallback
-  const token = authToken || localStorage.getItem("token");
+  // Retrieve token from props or localStorage fallback[cite: 1]
+  const token =
+    authToken ||
+    localStorage.getItem("weathergpt_token") ||
+    localStorage.getItem("token");
 
-  // Extract metrics from weather data
+  // Extract metrics from weather data[cite: 1]
   const windSpeed = weather?.current?.wind_speed_10m ?? 0;
   const rainProb = weather?.daily?.precipitation_probability_max?.[0] ?? 0;
   const weatherCode = weather?.current?.weather_code;
 
-  // Determine hazard conditions dynamically
+  // Determine hazard conditions dynamically[cite: 1]
   const isSevereWind = windSpeed > 40;
   const isHighRain = rainProb > 70;
   const isThunderstorm = [95, 96, 99].includes(weatherCode);

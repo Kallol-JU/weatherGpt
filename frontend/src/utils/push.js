@@ -1,3 +1,5 @@
+import { getApiUrl } from "../services/api";
+
 function urlBase64ToUint8Array(base64String) {
   const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
   const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
@@ -20,7 +22,8 @@ export async function subscribeUserToPush(token) {
     const permission = await Notification.requestPermission();
     if (permission !== "granted") return null;
 
-    const res = await fetch("/api/user/vapid-public-key");
+    const apiUrl = getApiUrl();
+    const res = await fetch(`${apiUrl}/api/user/vapid-public-key`);
     const { publicKey } = await res.json();
     if (!publicKey) return null;
 
