@@ -6,9 +6,11 @@ export function AuthModal({ onClose, onAuth }) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [phone, setPhone] = useState(""); // Added phone state
+  const [phone, setPhone] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [sector, setSector] = useState("Urban & General");
+  const [customDomain, setCustomDomain] = useState("");
 
   async function submit(e) {
     e.preventDefault();
@@ -18,8 +20,7 @@ export function AuthModal({ onClose, onAuth }) {
       const data =
         mode === "login"
           ? await login(email, password)
-          : // Pass phone to the register function
-            await register(name, email, password, phone);
+          : await register(name, email, password, phone, sector, customDomain); // Added sector and customDomain
       onAuth(data);
     } catch (err) {
       setError(err.message);
@@ -58,6 +59,46 @@ export function AuthModal({ onClose, onAuth }) {
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 required
+              />
+
+              <select
+                value={sector}
+                onChange={(e) => setSector(e.target.value)}
+                style={{
+                  border: "1px solid var(--line)",
+                  background: "var(--panel2)",
+                  color: "var(--text)",
+                  outline: "0",
+                  borderRadius: "12px",
+                  padding: "12px",
+                  boxShadow: "var(--inset)",
+                  width: "100%",
+                }}
+              >
+                <option value="Urban & General">
+                  Urban & General (Commuter, Office, Student)
+                </option>
+                <option value="Agriculture">Agriculture & Farming</option>
+                <option value="Fisheries & Maritime">
+                  Fisheries & Maritime
+                </option>
+                <option value="Construction & Labor">
+                  Construction & Outdoor Labor
+                </option>
+                <option value="Logistics & Transport">
+                  Logistics & Transport
+                </option>
+                <option value="Public Safety">
+                  Public Safety & Relief Work
+                </option>
+              </select>
+
+              <input
+                type="text"
+                placeholder="Job Title / Domain (e.g. Rice Farmer)"
+                maxLength={50}
+                value={customDomain}
+                onChange={(e) => setCustomDomain(e.target.value)}
               />
             </>
           )}

@@ -28,11 +28,18 @@ export function login(email, password) {
   });
 }
 
-export function register(name, email, password, phone) {
+// Updated to include sector and customDomain parameters
+export function register(name, email, password, phone, sector, customDomain) {
   return request("/api/auth/register", {
     method: "POST",
-    // Fixed: phone is now included in the payload sent to the backend
-    body: JSON.stringify({ name, email, password, phone }),
+    body: JSON.stringify({
+      name,
+      email,
+      password,
+      phone,
+      sector,
+      customDomain,
+    }),
   });
 }
 

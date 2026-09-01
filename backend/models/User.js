@@ -2,13 +2,33 @@ import mongoose from "mongoose";
 
 const userSchema = new mongoose.Schema(
   {
-    name: { type: String, required: true },
-    email: { type: String, required: true, unique: true },
-    password: { type: String, required: true },
-    phone: { type: String, default: "" },
+    name: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    email: {
+      type: String,
+      required: true,
+      unique: true,
+      lowercase: true,
+      trim: true,
+    },
+    password: {
+      type: String,
+      required: true,
+    },
+    phone: {
+      type: String,
+      default: "",
+      trim: true,
+    },
 
-    // web Push / FCM Subscription object for browser push notifications
-    pushSubscription: { type: Object, default: null },
+    // Web Push / FCM Subscription object for browser push notifications
+    pushSubscription: {
+      type: mongoose.Schema.Types.Mixed,
+      default: null,
+    },
 
     preferences: {
       language: { type: String, default: "English" },
@@ -16,7 +36,7 @@ const userSchema = new mongoose.Schema(
       theme: { type: String, enum: ["light", "dark"], default: "light" },
     },
 
-    // emergency alert toggles
+    // Emergency alert toggles
     alertSettings: {
       smsEnabled: { type: Boolean, default: false },
       pushEnabled: { type: Boolean, default: true },
@@ -26,15 +46,38 @@ const userSchema = new mongoose.Schema(
       extremeHeat: { type: Boolean, default: true },
     },
 
-    // primary location monitored by background cron jobs for emergency alerts
+    // Primary location monitored by background cron jobs for emergency alerts
     savedLocation: {
       name: { type: String, default: "Howrah" },
       country: { type: String, default: "India" },
       latitude: { type: Number, default: 22.5958 },
       longitude: { type: Number, default: 88.2636 },
     },
+
+    // Broad sector category for system-level alert customization
+    sector: {
+      type: String,
+      enum: [
+        "Agriculture",
+        "Fisheries & Maritime",
+        "Construction & Labor",
+        "Logistics & Transport",
+        "Public Safety",
+        "Urban & General",
+      ],
+      default: "Urban & General",
+    },
+
+    // Specific job role or custom domain (e.g., "Rice Farmer", "Delivery Agent")
+    customDomain: {
+      type: String,
+      trim: true,
+      maxlength: 50,
+      default: "",
+    },
   },
   { timestamps: true },
 );
 
-export default mongoose.model("User", userSchema);
+// Prevents model re-compilation error in development hot-reloading
+export default mongoose.models.User || mongoose.model("User", userSchema);

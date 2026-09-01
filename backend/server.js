@@ -6,6 +6,7 @@ import dotenv from "dotenv";
 import mongoose from "mongoose";
 import { GoogleGenAI } from "@google/genai";
 import Chat from "./models/Chat.js";
+import User from "./models/User.js"; // Added User model import
 import rateLimit from "express-rate-limit";
 import { RateLimiterMemory } from "rate-limiter-flexible";
 import authRoutes from "./routes/auth.js";
@@ -18,7 +19,7 @@ dotenv.config();
 
 const app = express();
 app.set("trust proxy", 1);
-// Updated CORS middleware to support cross-origin requests from Vercel
+
 app.use(
   cors({
     origin: "*",
@@ -30,7 +31,6 @@ app.use(express.json());
 
 const httpServer = createServer(app);
 
-// Updated Socket.io CORS configuration
 const io = new Server(httpServer, {
   cors: {
     origin: "*",
@@ -146,6 +146,39 @@ const socketLimiter = new RateLimiterMemory({
   duration: 60,
 });
 
+// FIXED: Added protect middleware, MongoDB update logic, and proper JSON response
+app.post("/api/alerts/subscribe", protect, async (req, res) => {
+  try {
+    const { phone, smsEnabled, pushEnabled, pushSubscription } = req.body;
+
+    const updatedUser = await User.findByIdAndUpdate(
+      req.userId,
+      {
+        $set: {
+          phone: phone || "",
+          "alertSettings.smsEnabled": smsEnabled,
+          "alertSettings.pushEnabled": pushEnabled,
+          pushSubscription: pushSubscription,
+        },
+      },
+      { new: true },
+    );
+
+    if (!updatedUser) {
+      return res.status(404).json({ error: "User not found." });
+    }
+
+    return res
+      .status(200)
+      .json({ success: true, message: "Alert preferences securely saved." });
+  } catch (error) {
+    console.error("Alert Subscription Error:", error);
+    return res
+      .status(500)
+      .json({ error: "Failed to update alert preferences." });
+  }
+});
+
 app.post("/api/weather-insight", async (req, res) => {
   const { city } = req.body || {};
 
@@ -182,11 +215,9 @@ app.post("/api/weather-insight", async (req, res) => {
       contents: prompt,
     });
 
-    const aiSummary = aiResponse.text;
-
     res.json({
       success: true,
-      aiSummary: aiSummary,
+      aiSummary: aiResponse.text,
       rawWeather: weatherData,
     });
   } catch (error) {
@@ -208,9 +239,11 @@ app.get("/api/forecast", protect, async (req, res) => {
     const isWithinIndia =
       lat >= 8.4 && lat <= 37.6 && lon >= 68.7 && lon <= 97.25;
     if (!isWithinIndia) {
-      return res.status(403).json({
-        error: "Forecast data is restricted to Indian territories only.",
-      });
+      return res
+        .status(403)
+        .json({
+          error: "Forecast data is restricted to Indian territories only.",
+        });
     }
 
     const forecastUrl = `https://api.openweathermap.org/data/2.5/forecast?lat=${lat}&lon=${lon}&units=metric&appid=${process.env.OPENWEATHER_API_KEY}`;
@@ -422,6 +455,15 @@ io.on("connection", (socket) => {
         });
       }
 
+      // Fetch User Persona for dynamic prompt generation
+      let userPersona = "General Citizen";
+      const userDoc = await User.findById(socket.userId);
+      if (userDoc) {
+        userPersona = userDoc.customDomain
+          ? `${userDoc.customDomain} (${userDoc.sector} sector)`
+          : `${userDoc.sector} worker`;
+      }
+
       const mapTilerUrl = `https://api.maptiler.com/geocoding/${lon},${lat}.json?key=${process.env.MAPTILER_API_KEY}`;
       const geoRes = await fetch(mapTilerUrl);
       const geoData = await geoRes.json();
@@ -443,13 +485,18 @@ io.on("connection", (socket) => {
         throw new Error(weatherData.message || "Weather API Error");
       }
 
+      // UPDATED: Injected userPersona dynamically into the system instruction
       const systemInstruction = `
         You are WeatherGPT, an AI disaster management assistant for the Indian government.
- 
+
         User Message: "${message}"
         Target Language Preference: ${language}
         Official Location: ${locationContext} (Lat: ${lat}, Lon: ${lon})
+        User Profile / Persona: ${userPersona}
         Live Meteorological Data: ${JSON.stringify(weatherData)}
+        
+        CRITICAL INSTRUCTION: Tailor your advice specifically for a ${userPersona}. 
+        - Do not list irrelevant technical data. Keep it actionable for their specific daily work context.
         
         LANGUAGE RULES:
         - You MUST respond fluently in the language requested by the user.

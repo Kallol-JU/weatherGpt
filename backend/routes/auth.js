@@ -7,7 +7,7 @@ const router = express.Router();
 
 router.post("/register", async (req, res) => {
   try {
-    const { name, email, password, phone } = req.body;
+    const { name, email, password, phone, sector, customDomain } = req.body;
 
     if (!name || !email || !password) {
       return res.status(400).json({ error: "All fields are required" });
@@ -22,12 +22,14 @@ router.post("/register", async (req, res) => {
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Fixed: Added phone to the database creation object
+    // Updated to include sector and customDomain in database creation
     const user = await User.create({
       name,
       email,
       password: hashedPassword,
-      phone,
+      phone: phone || "",
+      sector: sector || "Urban & General",
+      customDomain: customDomain || "",
     });
 
     const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
@@ -37,12 +39,14 @@ router.post("/register", async (req, res) => {
     res.status(201).json({
       success: true,
       token,
-      // Fixed: Return phone to the frontend
+      // Return updated fields back to the frontend session state
       user: {
         id: user._id,
         name: user.name,
         email: user.email,
         phone: user.phone,
+        sector: user.sector,
+        customDomain: user.customDomain,
       },
     });
   } catch (error) {
@@ -81,6 +85,8 @@ router.post("/login", async (req, res) => {
         name: user.name,
         email: user.email,
         phone: user.phone,
+        sector: user.sector,
+        customDomain: user.customDomain,
       },
     });
   } catch (error) {
