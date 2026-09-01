@@ -311,7 +311,8 @@ function App() {
     const h = new Date().getHours();
     const timeGreeting =
       h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening";
-    return user?.name ? `${timeGreeting}, ${user.name}` : timeGreeting;
+    const firstName = user?.name ? user.name.split(" ")[0] : "";
+    return firstName ? `${timeGreeting}, ${firstName}` : timeGreeting;
   }, [user]);
 
   return (
