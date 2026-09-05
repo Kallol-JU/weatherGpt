@@ -569,18 +569,7 @@ io.on("connection", (socket) => {
   });
 });
 
-app.get("/api/admin/clear-subscriptions", async (req, res) => {
-  try {
-    const result = await User.updateMany(
-      {},
-      { $set: { pushSubscription: null } },
-    );
-    res.json({ success: true, modifiedCount: result.modifiedCount });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
+//done
 const PORT = process.env.PORT || 5000;
 httpServer.listen(PORT, () =>
   console.log(`WeatherGPT server running on port ${PORT}`),
