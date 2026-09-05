@@ -6,14 +6,15 @@ import dotenv from "dotenv";
 import mongoose from "mongoose";
 import { GoogleGenAI } from "@google/genai";
 import Chat from "./models/Chat.js";
-import User from "./models/User.js"; // Added User model import
+import User from "./models/User.js";
 import rateLimit from "express-rate-limit";
 import { RateLimiterMemory } from "rate-limiter-flexible";
 import authRoutes from "./routes/auth.js";
 import { protect } from "./middleware/auth.js";
 import jwt from "jsonwebtoken";
 import userRoutes from "./routes/user.js";
-import { initAlertWorker } from "./services/alertWorker.js";
+// 1. Updated import to use the new triggerAlerts function
+import { triggerAlerts } from "./services/alertWorker.js";
 
 dotenv.config();
 
@@ -44,7 +45,7 @@ mongoose
   .connect(process.env.MONGO_URI)
   .then(() => {
     console.log("Successfully connected to MongoDB!");
-    initAlertWorker();
+    // 2. Removed initAlertWorker() from startup; it is now an HTTP trigger
   })
   .catch((err) => console.error("MongoDB connection error:", err));
 
@@ -146,7 +147,6 @@ const socketLimiter = new RateLimiterMemory({
   duration: 60,
 });
 
-// FIXED: Added protect middleware, MongoDB update logic, and proper JSON response
 app.post("/api/alerts/subscribe", protect, async (req, res) => {
   try {
     const { phone, smsEnabled, pushEnabled, pushSubscription } = req.body;
@@ -239,11 +239,9 @@ app.get("/api/forecast", protect, async (req, res) => {
     const isWithinIndia =
       lat >= 8.4 && lat <= 37.6 && lon >= 68.7 && lon <= 97.25;
     if (!isWithinIndia) {
-      return res
-        .status(403)
-        .json({
-          error: "Forecast data is restricted to Indian territories only.",
-        });
+      return res.status(403).json({
+        error: "Forecast data is restricted to Indian territories only.",
+      });
     }
 
     const forecastUrl = `https://api.openweathermap.org/data/2.5/forecast?lat=${lat}&lon=${lon}&units=metric&appid=${process.env.OPENWEATHER_API_KEY}`;
@@ -396,6 +394,21 @@ app.get("/api/history", protect, async (req, res) => {
   }
 });
 
+// 3. New endpoint for the external cron service to trigger alerts
+app.get("/api/trigger-cron", async (req, res) => {
+  try {
+    const result = await triggerAlerts();
+    res.status(200).json({
+      success: true,
+      message: "Alerts processed successfully.",
+      details: result,
+    });
+  } catch (error) {
+    console.error("Cron trigger error:", error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 io.use((socket, next) => {
   const token = socket.handshake.auth.token;
 
@@ -485,7 +498,6 @@ io.on("connection", (socket) => {
         throw new Error(weatherData.message || "Weather API Error");
       }
 
-      // UPDATED: Injected userPersona dynamically into the system instruction
       const systemInstruction = `
         You are WeatherGPT, an AI disaster management assistant for the Indian government.
 
