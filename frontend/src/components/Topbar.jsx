@@ -5,11 +5,10 @@ export function Topbar({
   setLanguage,
   onProfile,
   mobileMenu,
-  user, // Added user state
-  onLogin, // Added trigger for AuthModal
-  onLogout, // Added logout handler
+  user,
+  onLogin,
+  onLogout,
 }) {
-  // Convert full word back to shortcode for the UI button
   const shortLang =
     {
       English: "EN",
@@ -25,9 +24,15 @@ export function Topbar({
         ☰
       </button>
 
-      <button className="top-search" onClick={onLocation}>
-        <span>⌕</span>
-        <span>{location.name || "Search city..."}</span>
+      <button
+        className="top-search"
+        onClick={onLocation}
+        title={location.name || "Search city..."}
+      >
+        <span className="search-icon">⌕</span>
+        <span className="location-text">
+          {location.name || "Search city..."}
+        </span>
       </button>
 
       <div
@@ -51,9 +56,9 @@ export function Topbar({
           ⚙
         </button>
 
-        {/* Authentication Button */}
         {user ? (
           <button
+            className="auth-btn"
             onClick={onLogout}
             style={{
               padding: "0.4rem 1rem",
@@ -70,6 +75,7 @@ export function Topbar({
           </button>
         ) : (
           <button
+            className="auth-btn"
             onClick={onLogin}
             style={{
               padding: "0.4rem 1rem",

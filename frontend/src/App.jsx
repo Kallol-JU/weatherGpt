@@ -57,6 +57,9 @@ function App() {
   const [locationOpen, setLocationOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
 
+  // NEW: State to control the mobile sidebar drawer
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
   const [user, setUser] = useState(() =>
     JSON.parse(localStorage.getItem("weathergpt_user") || "null"),
   );
@@ -325,6 +328,12 @@ function App() {
         setUnit={setUnit}
         dark={dark}
         setDark={setDark}
+        // NEW MOBILE DRAWER PROPS
+        isOpen={mobileMenuOpen}
+        closeMenu={() => setMobileMenuOpen(false)}
+        user={user}
+        onLogin={() => setAuthOpen(true)}
+        onLogout={logout}
       />
       <main className="main-area">
         <Topbar
@@ -333,7 +342,8 @@ function App() {
           language={language}
           setLanguage={setLanguage}
           onProfile={() => setSettingsOpen(true)}
-          mobileMenu={() => setActive(active === "chat" ? "forecast" : "chat")}
+          // UPDATED TO TOGGLE DRAWER
+          mobileMenu={() => setMobileMenuOpen(true)}
           user={user}
           onLogin={() => setAuthOpen(true)}
           onLogout={logout}
@@ -343,7 +353,6 @@ function App() {
         <div className="dashboard">
           {active === "chat" && (
             <div className="chat-layout-grid">
-              {/* Left/Top Column: Weather Context Widgets */}
               <div className="weather-widgets-column">
                 <div className="dashboard-welcome">
                   <div>
@@ -376,7 +385,6 @@ function App() {
                 </div>
               </div>
 
-              {/* Right/Bottom Column: Primary AI Interface */}
               <div className="chat-panel-column">
                 <ChatPanel
                   messages={messages}
@@ -399,7 +407,6 @@ function App() {
           )}
           {active === "maps" && <Maps location={location} />}
 
-          {/* FIXED: Passed authToken/token down to Alerts component */}
           {active === "alerts" && (
             <Alerts location={location} weather={weather} authToken={token} />
           )}

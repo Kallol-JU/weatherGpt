@@ -325,8 +325,6 @@
   margin: 0 auto;
   padding: 20px;
   display: block;
-  /* grid-template-columns: minmax(0, 1fr) 420px;
-  gap: 18px; */
 }
 .dashboard-main {
   min-width: 0;
@@ -1607,7 +1605,7 @@
 }
 @media (max-width: 720px) {
   .sidebar {
-    display: none;
+    /* Removed display: none; conflict */
   }
   .mobile-menu {
     display: block;
@@ -1758,5 +1756,81 @@
 
   .weather-widgets-column {
     width: 100%;
+  }
+}
+
+/* 1. Force the search button to respect flex boundaries */
+.top-search {
+  flex: 1;
+  min-width: 0; /* Critical: prevents the flex child from overflowing */
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow: hidden;
+}
+
+/* 2. Truncate the long location text with an ellipsis (...) */
+.location-text {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+/* 3. Hide the bulky Sign In button on mobile to save space */
+@media (max-width: 768px) {
+  .auth-btn {
+    display: none !important;
+  }
+}
+
+/* Ensure the sidebar has a solid background and high z-index */
+.sidebar {
+  background-color: #0b132b; /* Adjust if your dark theme uses a different hex */
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.3s ease-in-out;
+}
+
+/* Hide mobile auth block on desktop */
+.mobile-auth {
+  display: none;
+}
+
+/* Mobile-specific drawer styling */
+@media (max-width: 768px) {
+  .sidebar {
+    display: flex !important; /* CRITICAL: Overrides earlier display rule */
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100vh;
+    width: 260px;
+    transform: translateX(-100%); /* Hidden by default off-screen */
+    box-shadow: 4px 0 15px rgba(0, 0, 0, 0.5);
+  }
+
+  /* The class applied when the hamburger is clicked */
+  .sidebar.open {
+    transform: translateX(0); /* Slide in */
+  }
+
+  /* Show the auth button only inside the mobile sidebar */
+  .mobile-auth {
+    display: block;
+    margin-bottom: 16px;
+    padding: 0 12px;
+  }
+
+  .auth-btn-mobile {
+    width: 100%;
+    padding: 10px;
+    border-radius: 20px;
+    background: #007bff;
+    color: white;
+    border: none;
+    font-weight: 600;
+    cursor: pointer;
   }
 }
