@@ -80,7 +80,7 @@ export async function geocodeCity(city) {
   };
 }
 
-export async function getForecast(latitude, longitude) {
+export async function getForecast(latitude, longitude, force = false) {
   const url = new URL("https://api.open-meteo.com/v1/forecast");
   url.searchParams.set("latitude", latitude);
   url.searchParams.set("longitude", longitude);
@@ -94,13 +94,16 @@ export async function getForecast(latitude, longitude) {
     "hourly",
     "temperature_2m,precipitation_probability,weather_code,wind_speed_10m",
   );
-
   url.searchParams.set(
     "daily",
     "weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,rain_sum,sunrise,sunset,uv_index_max,wind_speed_10m_max",
   );
 
-  const response = await fetch(url);
+  const fetchOptions = force ? { cache: "no-store" } : {};
+
+  const response = await fetch(url, fetchOptions);
   if (!response.ok) throw new Error("Forecast service is unavailable.");
-  return response.json();
+  const data = await response.json();
+
+  return { ...data };
 }

@@ -360,7 +360,13 @@
   border-radius: 13px;
   box-shadow: var(--shadow-dark);
   font-size: 19px;
+  transition: transform 0.4s ease;
 }
+
+.refresh-btn:active {
+  transform: rotate(360deg);
+}
+
 .weather-overview {
   border-radius: 20px;
   overflow: hidden;

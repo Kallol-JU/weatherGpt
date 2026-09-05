@@ -364,7 +364,8 @@ function App() {
                   </div>
                   <button
                     className="refresh-btn"
-                    onClick={() => loadLocation(location)}
+                    onClick={() => loadLocation({ ...location }, true)}
+                    title="Refresh weather data"
                   >
                     ↻
                   </button>
