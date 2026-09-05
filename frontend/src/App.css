@@ -658,6 +658,7 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  max-width: 100%;
 }
 .theme-light .chat-panel {
   background: linear-gradient(145deg, #edf4fb, #e7eff8);
@@ -717,7 +718,9 @@
 .chat-scroll {
   flex: 1;
   overflow-y: auto;
+  overflow-x: hidden;
   padding: 19px 17px 10px;
+  min-width: 0;
 }
 .chat-empty {
   text-align: center;
@@ -742,6 +745,8 @@
   display: flex;
   gap: 9px;
   margin-bottom: 16px;
+  min-width: 0;
+  width: 100%;
 }
 .chat-message.user {
   justify-content: flex-end;
@@ -759,6 +764,7 @@
 }
 .bubble-wrap {
   max-width: 84%;
+  min-width: 0;
 }
 .bubble {
   padding: 12px 14px;
@@ -769,6 +775,9 @@
   font-size: 12px;
   line-height: 1.7;
   white-space: pre-wrap;
+  word-break: break-word;
+  overflow-wrap: break-word;
+  max-width: 100%;
 }
 .theme-light .bubble {
   background: #e5edf6;
@@ -1725,18 +1734,6 @@
   height: 100%;
   display: flex;
   flex-direction: column;
-}
-
-.chat-panel {
-  display: flex;
-  flex-direction: column;
-  height: 100%; /* Ensures the chat window stretches top to bottom */
-  flex: 1;
-}
-
-.chat-scroll {
-  flex: 1;
-  overflow-y: auto; /* Allows messages to scroll natively */
 }
 
 /* --- Mobile Responsive Rule (AI Chat First) --- */
