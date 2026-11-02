@@ -101,9 +101,31 @@ export async function getForecast(latitude, longitude, force = false) {
 
   const fetchOptions = force ? { cache: "no-store" } : {};
 
-  const response = await fetch(url, fetchOptions);
-  if (!response.ok) throw new Error("Forecast service is unavailable.");
-  const data = await response.json();
+  // Fetch forecast and official numerical air quality concurrently
+  const forecastPromise = fetch(url, fetchOptions);
 
-  return { ...data };
+  const aqiUrl = new URL("https://air-quality-api.open-meteo.com/v1/air-quality");
+  aqiUrl.searchParams.set("latitude", latitude);
+  aqiUrl.searchParams.set("longitude", longitude);
+  aqiUrl.searchParams.set(
+    "current",
+    "us_aqi,european_aqi,pm10,pm2_5,carbon_monoxide,nitrogen_dioxide,sulphur_dioxide,ozone",
+  );
+  const aqiPromise = fetch(aqiUrl, fetchOptions).catch(() => null);
+
+  const [forecastRes, aqiRes] = await Promise.all([forecastPromise, aqiPromise]);
+
+  if (!forecastRes.ok) throw new Error("Forecast service is unavailable.");
+  const data = await forecastRes.json();
+
+  let airQuality = null;
+  if (aqiRes && aqiRes.ok) {
+    try {
+      airQuality = await aqiRes.json();
+    } catch {
+      airQuality = null;
+    }
+  }
+
+  return { ...data, airQuality };
 }

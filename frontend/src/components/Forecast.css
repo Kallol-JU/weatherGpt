@@ -1,0 +1,271 @@
+/* ==========================================================================
+   Forecast table
+   One continuous panel with hairline rules. The range bar places each day's
+   low–high span inside the week's range, so the week can be read vertically.
+   ========================================================================== */
+
+.page-section.forecast-page {
+  max-width: 1180px;
+}
+
+.forecast-heading {
+  margin-bottom: 22px;
+}
+
+.forecast-heading p {
+  font-size: var(--text-sm);
+  color: var(--ink-muted);
+}
+
+.forecast-panel {
+  overflow: hidden;
+  background: var(--surface-1);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-lg);
+}
+
+.forecast-head,
+.forecast-row {
+  display: grid;
+  grid-template-columns: 122px 255px max-content 132px 118px;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 22px;
+}
+
+.forecast-head {
+  min-height: 42px;
+  font-size: var(--text-2xs);
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  color: var(--ink-muted);
+  background: color-mix(in srgb, var(--ink) 2.5%, transparent);
+  border-bottom: 1px solid var(--rule);
+}
+
+.forecast-head [role="columnheader"] {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  min-width: 0;
+}
+
+.forecast-unit {
+  font-size: 10px;
+  font-weight: 400;
+  color: var(--ink-muted);
+  opacity: 0.85;
+}
+
+.forecast-row {
+  min-height: 62px;
+  padding-top: 11px;
+  padding-bottom: 11px;
+  transition: background-color 160ms ease;
+}
+
+.forecast-row + .forecast-row {
+  border-top: 1px solid var(--rule);
+}
+
+.forecast-row:hover {
+  background: color-mix(in srgb, var(--ink) 3%, transparent);
+}
+
+/* Day --------------------------------------------------------------------- */
+.forecast-day {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.forecast-day strong {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.forecast-day span {
+  font-size: 12px;
+  color: var(--ink-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Conditions -------------------------------------------------------------- */
+.forecast-cond {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.35;
+  color: var(--ink);
+}
+
+.forecast-cond__icon {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 32px;
+  height: 32px;
+}
+
+.forecast-cond > span:last-child {
+  min-width: 0;
+}
+
+/* Temperature ------------------------------------------------------------- */
+.forecast-temp {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.forecast-temps {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.forecast-high {
+  font-size: 19px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+}
+
+.forecast-sep {
+  font-size: 14px;
+  color: var(--ink-muted);
+  opacity: 0.6;
+}
+
+.forecast-low {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--ink-muted);
+}
+
+/* Rain and wind ----------------------------------------------------------- */
+.forecast-rain,
+.forecast-wind {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.forecast-rain strong {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.forecast-muted {
+  font-size: 12px;
+  color: var(--ink-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.forecast-wind {
+  color: var(--ink-muted);
+}
+
+.forecast-wind span {
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Compact layout: header is dropped, cells re-flow into a two-column block. */
+@media (max-width: 1180px) {
+  /* Keep the header in the accessibility tree while the rows re-flow. */
+  .forecast-head {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    min-height: 0;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  .forecast-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "day temp"
+      "cond temp"
+      "rain wind";
+    gap: 5px 18px;
+    padding: 14px 18px;
+    min-height: 0;
+    justify-content: normal;
+  }
+
+  .forecast-day {
+    grid-area: day;
+    flex-direction: row;
+    align-items: baseline;
+    gap: 8px;
+  }
+
+  .forecast-cond {
+    grid-area: cond;
+    margin-top: 2px;
+  }
+
+  .forecast-temp {
+    grid-area: temp;
+    justify-content: flex-end;
+    align-self: center;
+  }
+
+  .forecast-rain {
+    grid-area: rain;
+  }
+
+  .forecast-wind {
+    grid-area: wind;
+    justify-self: end;
+  }
+}
+
+@media (max-width: 560px) {
+  .forecast-heading {
+    margin-bottom: 18px;
+  }
+
+  .forecast-row {
+    grid-template-areas:
+      "day temp"
+      "cond cond"
+      "rain wind";
+  }
+
+  .forecast-temp {
+    align-self: start;
+  }
+
+  .forecast-cond {
+    margin-top: 4px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .forecast-row {
+    transition: none;
+  }
+}

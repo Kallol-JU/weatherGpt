@@ -1,8 +1,13 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
+import { Search, MapPin, Check, ChevronRight, X, Navigation } from "lucide-react";
 import { geocodeCity } from "../services/api";
+import { useDialog } from "../hooks/useDialog";
 
 export function LocationModal({ current, onClose, onChange }) {
   const [query, setQuery] = useState("");
+  const dialogRef = useRef(null);
+
+  useDialog(true, onClose, dialogRef);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const recent = ["Kolkata", "Mumbai", "Delhi", "Bengaluru", "Chennai"];
@@ -35,7 +40,6 @@ export function LocationModal({ current, onClose, onChange }) {
         try {
           const { latitude, longitude } = pos.coords;
 
-          // Reverse geocoding to translate coordinates into a readable city name
           const mapTilerKey =
             import.meta.env.VITE_MAPTILER_API_KEY || "skvm1S2eynHwdOdazyId";
           const res = await fetch(
@@ -72,7 +76,7 @@ export function LocationModal({ current, onClose, onChange }) {
           });
 
           onClose();
-        } catch (e) {
+        } catch {
           setError("Could not retrieve location details.");
         } finally {
           setLoading(false);
@@ -92,13 +96,23 @@ export function LocationModal({ current, onClose, onChange }) {
 
   return (
     <div className="modal-layer" onMouseDown={onClose}>
-      <div className="location-card" onMouseDown={(e) => e.stopPropagation()}>
+      <div
+        className="location-card"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="location-title"
+        ref={dialogRef}
+        tabIndex={-1}
+        onMouseDown={(e) => e.stopPropagation()}
+      >
         <div className="modal-title">
           <div>
-            <h2>Choose your location</h2>
-            <p>WeatherGPT uses this location for forecasts and advice.</p>
+            <h2 id="location-title">Choose Location</h2>
+            <p>Select target meteorological coordinates for forecasts and advisories.</p>
           </div>
-          <button onClick={onClose}>×</button>
+          <button type="button" onClick={onClose} aria-label="Close modal">
+            <X size={18} />
+          </button>
         </div>
 
         <form
@@ -108,12 +122,13 @@ export function LocationModal({ current, onClose, onChange }) {
             if (query.trim()) choose(query.trim());
           }}
         >
-          <span>⌕</span>
+          <Search size={18} className="text-slate-400" />
           <input
             autoFocus
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search city or location..."
+            placeholder="Search city, district, or coordinates..."
+            aria-label="Search city, district, or coordinates"
           />
           <button disabled={loading}>Search</button>
         </form>
@@ -121,25 +136,39 @@ export function LocationModal({ current, onClose, onChange }) {
         {error && <div className="form-error">{error}</div>}
 
         <button
+          type="button"
           className="current-location-btn"
           onClick={useCurrentLocation}
           disabled={loading}
         >
-          {loading ? "Fetching..." : "⌖ Use my current location"}
+          <Navigation size={16} className="inline mr-2 text-sky-400" />
+          {loading ? "Locating Sensor Coordinates..." : "Use Current GPS Location"}
         </button>
 
-        <span className="modal-label">Recent locations</span>
+        <span className="modal-label">Major Meteorological Stations</span>
         {recent.map((x) => (
           <button
             key={x}
-            className={`location-option ${current?.name === x ? "selected" : ""}`}
+            type="button"
+            className={`location-option ${current?.name?.includes(x) ? "selected" : ""}`}
             onClick={() => choose(x)}
           >
-            ⌖ {x}
-            <span>{current?.name === x ? "✓" : "›"}</span>
+            <div className="flex items-center gap-2">
+              <MapPin size={16} className="text-sky-400" />
+              <span>{x}</span>
+            </div>
+            <span>
+              {current?.name?.includes(x) ? (
+                <Check size={16} className="text-emerald-400" />
+              ) : (
+                <ChevronRight size={16} className="text-slate-500" />
+              )}
+            </span>
           </button>
         ))}
       </div>
     </div>
   );
 }
+
+export default LocationModal;

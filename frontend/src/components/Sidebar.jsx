@@ -1,54 +1,103 @@
-import { Icon } from "./Icon";
+import { useRef } from "react";
+import {
+  LayoutDashboard,
+  CalendarDays,
+  Map,
+  ShieldAlert,
+  MapPin,
+  History,
+  Settings,
+  Info,
+  CloudSun,
+  LogIn,
+  LogOut,
+  X,
+} from "lucide-react";
+import ActiveHighlight from "./ActiveHighlight";
 
-const items = [
-  ["chat", "⌁", "Overview"],
-  ["forecast", "▦", "Forecast"],
-  ["maps", "◇", "Maps"],
-  ["alerts", "♧", "Alerts"],
-  ["locations", "♡", "Saved Locations"],
-  ["history", "◷", "History"],
-  ["settings", "⚙", "Settings"],
-  ["about", "ⓘ", "About"],
+const navItems = [
+  { id: "chat", label: "Overview", icon: LayoutDashboard },
+  { id: "forecast", label: "7-Day Forecast", icon: CalendarDays },
+  { id: "maps", label: "Interactive Radar", icon: Map },
+  { id: "alerts", label: "Safety & Alerts", icon: ShieldAlert },
+  { id: "locations", label: "Saved Locations", icon: MapPin },
+  { id: "history", label: "Query History", icon: History },
+  { id: "settings", label: "Preferences", icon: Settings },
+  { id: "about", label: "About System", icon: Info },
 ];
 
 export function Sidebar({
   active,
   setActive,
-  location,
-  unit,
-  setUnit,
-  dark,
-  setDark,
-  isOpen, // NEW: Accepts state from App.jsx to toggle mobile view
-  closeMenu, // NEW: Closes menu after clicking a link
-  user, // NEW: For mobile auth
-  onLogin, // NEW: For mobile auth
-  onLogout, // NEW: For mobile auth
+  isOpen,
+  closeMenu,
+  user,
+  onLogin,
+  onLogout,
 }) {
-  // Auto-close the mobile menu when an item is clicked
+  const navRef = useRef(null);
+  const itemRefs = useRef({});
+
   const handleNavigation = (id) => {
     setActive(id);
     if (closeMenu) closeMenu();
   };
 
   return (
-    <aside className={`sidebar ${isOpen ? "open" : ""}`}>
-      <button className="brand" onClick={() => handleNavigation("chat")}>
-        <span className="brand-weather">🌤️</span>
-        <span>WeatherGPT</span>
+    <aside className={`sidebar ${isOpen ? "open" : ""}`} aria-label="Sidebar navigation">
+      {/* Brand Header */}
+      <button
+        className="brand"
+        onClick={() => handleNavigation("chat")}
+        aria-label="WeatherGPT Home"
+      >
+        <span className="brand-weather text-sky-400" aria-hidden="true">
+          <CloudSun size={28} />
+        </span>
+        <span className="brand-title">WeatherGPT</span>
       </button>
 
-      <nav className="side-nav">
-        {items.map(([id, icon, label]) => (
-          <button
-            key={id}
-            className={`side-item ${active === id ? "active" : ""}`}
-            onClick={() => handleNavigation(id)}
-          >
-            <Icon>{icon}</Icon>
-            <span>{label}</span>
-          </button>
-        ))}
+      <button
+        type="button"
+        className="sidebar-close"
+        onClick={closeMenu}
+        aria-label="Close navigation"
+      >
+        <X size={18} aria-hidden="true" />
+      </button>
+
+      {/* Navigation List with Single Continuous Sliding Highlight */}
+      <nav
+        ref={navRef}
+        className="side-nav"
+        id="primary-navigation"
+        aria-label="Main Navigation"
+      >
+        {/* The single, physically moving highlight */}
+        <ActiveHighlight
+          activeId={active}
+          containerRef={navRef}
+          itemRefs={itemRefs}
+          borderRadius={16}
+          accentColor="#38bdf8"
+          showAccent={true}
+        />
+
+        {navItems.map(({ id, label, icon: IconComponent }) => {
+          const isActive = active === id;
+          return (
+            <button
+              key={id}
+              ref={(el) => (itemRefs.current[id] = el)}
+              className={`side-item ${isActive ? "active" : ""}`}
+              onClick={() => handleNavigation(id)}
+              aria-current={isActive ? "page" : undefined}
+            >
+              <IconComponent size={18} className="side-icon shrink-0" />
+              <span className="side-label">{label}</span>
+            </button>
+          );
+        })}
       </nav>
 
       <div className="sidebar-bottom">
@@ -56,54 +105,20 @@ export function Sidebar({
         <div className="mobile-auth">
           {user ? (
             <button className="auth-btn-mobile" onClick={onLogout}>
-              Logout
+              <LogOut size={16} className="inline mr-1" />
+              Sign Out
             </button>
           ) : (
             <button className="auth-btn-mobile" onClick={onLogin}>
-              Sign In / Sign Up
+              <LogIn size={16} className="inline mr-1" />
+              Sign In
             </button>
           )}
         </div>
 
-        <button
-          className="side-location"
-          onClick={() => handleNavigation("locations")}
-        >
-          <span className="location-pin">●</span>
-          <span>
-            <strong>{location.name}</strong>
-            <small>{location.country || "India"}</small>
-          </span>
-          <span className="chevron">›</span>
-        </button>
-
-        <div className="unit-control">
-          <button
-            className={unit === "C" ? "selected" : ""}
-            onClick={() => setUnit("C")}
-          >
-            °C
-          </button>
-          <button
-            className={unit === "F" ? "selected" : ""}
-            onClick={() => setUnit("F")}
-          >
-            °F
-          </button>
-        </div>
-
-        <div className="theme-control">
-          <span>◐</span>
-          <strong>Dark Mode</strong>
-          <button
-            className={`switch ${dark ? "on" : ""}`}
-            onClick={() => setDark(!dark)}
-            aria-label="Toggle dark mode"
-          >
-            <i />
-          </button>
-        </div>
       </div>
     </aside>
   );
 }
+
+export default Sidebar;

@@ -1,12 +1,24 @@
 import { useEffect, useMemo, useState } from "react";
 import { io } from "socket.io-client";
+import {
+  RefreshCw,
+  MapPin,
+  Check,
+  LogOut,
+} from "lucide-react";
 import "./App.css";
+
+// React Bits components
+import DotField from "./components/DotField";
+import SwipeToast from "./components/SwipeToast";
+
+// Layout & View Components
 import { Sidebar } from "./components/Sidebar";
 import { Topbar } from "./components/Topbar";
 import { ChatPanel } from "./components/ChatPanel";
 import { WeatherOverview } from "./components/WeatherOverview";
-import { Forecast, FullForecast } from "./components/Forecast";
-import { TrendCard } from "./components/TrendCard";
+import { HourlyForecast } from "./components/HourlyForecast";
+import { FullForecast } from "./components/Forecast";
 import { Alerts } from "./components/Alerts";
 import { Advisories } from "./components/Advisories";
 import { Climate } from "./components/Climate";
@@ -14,16 +26,20 @@ import { Voice } from "./components/Voice";
 import { History } from "./components/History";
 import { Maps } from "./components/Maps";
 import { About } from "./components/About";
+import { NotFound } from "./components/NotFound";
+
+// Modals
 import { AuthModal } from "./components/AuthModal";
 import { LocationModal } from "./components/LocationModal";
 import { SettingsModal } from "./components/SettingsModal";
+
+// Services & Utilities
 import {
   getApiUrl,
   getForecast,
   getHistory,
-  geocodeCity,
 } from "./services/api";
-import { formatTemp, formatTime, weatherMeta } from "./utils/weather";
+import { getConditionTheme } from "./utils/weather";
 
 const defaultLocation = {
   name: "Kolkata",
@@ -32,6 +48,20 @@ const defaultLocation = {
   longitude: 88.3639,
   timezone: "Asia/Kolkata",
 };
+
+const KNOWN_ROUTES = [
+  "chat",
+  "forecast",
+  "maps",
+  "alerts",
+  "advisory",
+  "climate",
+  "voice",
+  "history",
+  "locations",
+  "settings",
+  "about",
+];
 
 function App() {
   const [active, setActive] = useState("chat");
@@ -56,9 +86,11 @@ function App() {
   const [authOpen, setAuthOpen] = useState(false);
   const [locationOpen, setLocationOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
-
-  // NEW: State to control the mobile sidebar drawer
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  // SwipeToast Alert Notification State
+  const [toastOpen, setToastOpen] = useState(false);
+  const [toastDetails, setToastDetails] = useState(null);
 
   const [user, setUser] = useState(() =>
     JSON.parse(localStorage.getItem("weathergpt_user") || "null"),
@@ -86,17 +118,59 @@ function App() {
   useEffect(() => {
     localStorage.setItem("weathergpt_dark", dark);
     document.documentElement.classList.toggle("dark", dark);
+    document.documentElement.classList.toggle("theme-light", !dark);
   }, [dark]);
 
-  async function loadLocation(place) {
+  useEffect(() => {
+    if (!mobileMenuOpen) return;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    function handleKey(event) {
+      if (event.key === "Escape") setMobileMenuOpen(false);
+    }
+
+    window.addEventListener("keydown", handleKey);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", handleKey);
+    };
+  }, [mobileMenuOpen]);
+
+  async function loadLocation(place, force = false) {
     setLoadingWeather(true);
     setWeatherError("");
     try {
-      const data = await getForecast(place.latitude, place.longitude);
+      const data = await getForecast(place.latitude, place.longitude, force);
       setLocation(place);
       setWeather(data);
+
+      // Check for active advisories to display the SwipeToast
+      const windSpeed = data.current?.wind_speed_10m ?? 0;
+      const rainProb = data.daily?.precipitation_probability_max?.[0] ?? 0;
+      const code = data.current?.weather_code ?? 0;
+      const aqi = data.airQuality?.current?.us_aqi;
+
+      if (code >= 95 || windSpeed > 40 || rainProb > 70 || (aqi && aqi > 150)) {
+        const hazardSummary =
+          code >= 95
+            ? "Convective thunderstorm activity detected on radar."
+            : windSpeed > 40
+              ? `Elevated wind speed detected (${Math.round(windSpeed)} km/h).`
+              : rainProb > 70
+                ? `High precipitation probability (${rainProb}%).`
+                : `Elevated air quality index (${aqi}).`;
+
+        setToastDetails({
+          title: "Atmospheric Advisory Active",
+          description: `${place.name}: ${hazardSummary}`,
+          actionLabel: "View Safety Center",
+        });
+        setToastOpen(true);
+      }
     } catch (err) {
-      setWeatherError(err.message || "Could not load weather.");
+      setWeatherError(err.message || "Could not load meteorological observations.");
     } finally {
       setLoadingWeather(false);
     }
@@ -150,7 +224,7 @@ function App() {
               JSON.stringify(detectedLoc),
             );
             loadLocation(detectedLoc);
-          } catch (err) {
+          } catch {
             loadLocation(defaultLocation);
           }
         },
@@ -231,7 +305,7 @@ function App() {
       const data = await getHistory(authToken);
       setHistory(data.history || []);
     } catch {
-      /* keep UI usable */
+      /* keep UI resilient */
     }
   }
 
@@ -296,13 +370,8 @@ function App() {
     }
   }
 
-  function handleQuick(q) {
-    const map = {
-      "Current weather": "What is the current weather?",
-      "5 day forecast": "How will the weather be for the next 5 days?",
-      "Weather alerts": "Are there any weather warnings or alerts?",
-    };
-    setInput(map[q] || q);
+  function handleQuick(prompt) {
+    setInput(prompt);
   }
 
   function selectHistory(text) {
@@ -318,36 +387,84 @@ function App() {
     return firstName ? `${timeGreeting}, ${firstName}` : timeGreeting;
   }, [user]);
 
+  const conditionTheme = useMemo(() => {
+    return getConditionTheme(weather?.current?.weather_code ?? 0);
+  }, [weather?.current?.weather_code]);
+
   return (
     <div className={`app-shell ${dark ? "theme-dark" : "theme-light"}`}>
+      <a className="skip-link" href="#main-content">
+        Skip to content
+      </a>
+
+      {/* Background Animated Condition DotField */}
+      <div className="dotfield-background" aria-hidden="true">
+        <DotField
+          pattern="grid"
+          opacity={0.16}
+          speed={0.5}
+          sparkle={true}
+          gradientFrom={conditionTheme.gradientFrom}
+          gradientTo={conditionTheme.gradientTo}
+          glowColor={conditionTheme.glowColor}
+        />
+      </div>
+
+      {/* SwipeToast Alert Banner */}
+      {toastOpen && toastDetails && (
+        <div className="app-toast-container" role="alert">
+          <SwipeToast
+            open={toastOpen}
+            title={toastDetails.title}
+            description={toastDetails.description}
+            actionLabel={toastDetails.actionLabel}
+            onAction={() => {
+              setActive("alerts");
+              setToastOpen(false);
+            }}
+            onClose={() => setToastOpen(false)}
+            background={dark ? "#1e293b" : "#f8fafc"}
+            color={dark ? "#f8fafc" : "#0f172a"}
+            fuseColor="#ef4444"
+            closeButton={true}
+            duration={8000}
+          />
+        </div>
+      )}
+
+      {mobileMenuOpen && (
+        <button
+          type="button"
+          className="sidebar-scrim"
+          aria-label="Close navigation menu"
+          onClick={() => setMobileMenuOpen(false)}
+        />
+      )}
+
       <Sidebar
         active={active}
         setActive={setActive}
-        location={location}
-        unit={unit}
-        setUnit={setUnit}
-        dark={dark}
-        setDark={setDark}
-        // NEW MOBILE DRAWER PROPS
         isOpen={mobileMenuOpen}
         closeMenu={() => setMobileMenuOpen(false)}
         user={user}
         onLogin={() => setAuthOpen(true)}
         onLogout={logout}
       />
-      <main className="main-area">
+
+      <main className="main-area" id="main-content" tabIndex={-1}>
         <Topbar
           location={location}
           onLocation={() => setLocationOpen(true)}
-          language={language}
-          setLanguage={setLanguage}
           onProfile={() => setSettingsOpen(true)}
-          // UPDATED TO TOGGLE DRAWER
+          dark={dark}
+          onToggleTheme={() => setDark((value) => !value)}
           mobileMenu={() => setMobileMenuOpen(true)}
+          menuOpen={mobileMenuOpen}
           user={user}
           onLogin={() => setAuthOpen(true)}
           onLogout={logout}
         />
+
         {weatherError && <div className="inline-error">{weatherError}</div>}
 
         <div className="dashboard">
@@ -355,35 +472,34 @@ function App() {
             <div className="chat-layout-grid">
               <div className="weather-widgets-column">
                 <div className="dashboard-welcome">
-                  <div>
-                    <span className="eyebrow">
-                      {location.name}, {location.country}
-                    </span>
-                    <h1>{greeting} 👋</h1>
-                    <p>Your weather, explained simply.</p>
+                  <div className="dashboard-welcome__copy">
+                    <h1>{greeting}</h1>
+                    <p>Live conditions and practical guidance for your day.</p>
                   </div>
                   <button
-                    className="refresh-btn"
+                    type="button"
+                    className="btn-glass btn-glass-sm"
                     onClick={() => loadLocation({ ...location }, true)}
-                    title="Refresh weather data"
+                    title="Refresh telemetry"
                   >
-                    ↻
+                    <RefreshCw size={14} className="inline mr-1" />
+                    Refresh Data
                   </button>
                 </div>
+
+                {/* 1. Main Glassmorphism Overview Container */}
                 <WeatherOverview
                   location={location}
-                  weather={weather}
+                  weather={loadingWeather ? null : weather}
                   unit={unit}
+                  dark={dark}
+                  user={user}
                   onAsk={sendMessage}
+                  onOpenForecast={() => setActive("forecast")}
                 />
-                <div className="dashboard-two">
-                  <Forecast
-                    weather={weather}
-                    unit={unit}
-                    onOpen={() => setActive("forecast")}
-                  />
-                  <TrendCard weather={weather} unit={unit} />
-                </div>
+
+                {/* 2. Integrated 24-Hour Forecast */}
+                <HourlyForecast weather={weather} unit={unit} />
               </div>
 
               <div className="chat-panel-column">
@@ -395,8 +511,10 @@ function App() {
                   onQuick={handleQuick}
                   connected={connected}
                   streaming={streaming}
+                  authenticated={Boolean(token)}
                   onLogin={() => setAuthOpen(true)}
                   language={language}
+                  location={location}
                   onStop={stopGeneration}
                 />
               </div>
@@ -404,27 +522,44 @@ function App() {
           )}
 
           {active === "forecast" && (
-            <FullForecast weather={weather} unit={unit} />
+            <FullForecast weather={weather} unit={unit} location={location} />
           )}
-          {active === "maps" && <Maps location={location} />}
+
+          {active === "maps" && (
+            <Maps
+              location={location}
+              weather={weather}
+              onNavigateAlerts={() => setActive("alerts")}
+            />
+          )}
 
           {active === "alerts" && (
-            <Alerts location={location} weather={weather} authToken={token} />
+            <Alerts
+              location={location}
+              weather={weather}
+              authToken={token}
+              onNavigateMaps={() => setActive("maps")}
+            />
           )}
 
           {active === "advisory" && (
             <Advisories location={location} onAsk={sendMessage} />
           )}
+
           {active === "climate" && <Climate location={location} />}
+
           {active === "voice" && (
             <Voice onAsk={sendMessage} language={language} />
           )}
+
           {active === "history" && (
             <History history={history} onSelect={selectHistory} />
           )}
+
           {active === "locations" && (
             <LocationPage current={location} onChange={handleLocationChange} />
           )}
+
           {active === "settings" && (
             <SettingsPage
               dark={dark}
@@ -437,12 +572,22 @@ function App() {
               onLogout={logout}
             />
           )}
+
           {active === "about" && <About />}
+
+          {/* Custom 404 Page for any unrecognized route */}
+          {!KNOWN_ROUTES.includes(active) && (
+            <NotFound onHome={() => setActive("chat")} />
+          )}
         </div>
       </main>
 
       {authOpen && (
-        <AuthModal onClose={() => setAuthOpen(false)} onAuth={handleAuth} />
+        <AuthModal
+          onClose={() => setAuthOpen(false)}
+          onAuth={handleAuth}
+          dark={dark}
+        />
       )}
       {locationOpen && (
         <LocationModal
@@ -468,28 +613,32 @@ function App() {
   );
 }
 
-function LocationPage({ current, onChange }) {
+function LocationPage({ current }) {
   return (
-    <section className="page-section">
+    <section className="page-section" style={{ width: "100%" }}>
       <div className="section-title">
         <div>
-          <h1>Saved locations</h1>
-          <p>Choose a location for weather and conversations.</p>
+          <div className="flex items-center gap-2">
+            <MapPin size={24} className="text-sky-400" />
+            <h1>Saved Meteorological Stations</h1>
+          </div>
+          <p>Switch observation coordinates for localized synoptic reports.</p>
         </div>
       </div>
+
       <div className="saved-location-card">
         <div className="saved-current">
-          <span>⌖</span>
+          <MapPin size={22} className="text-sky-400 shrink-0" />
           <div>
             <strong>
-              {current.name}, {current.country}
+              {current.name}, {current.country || "Global"}
             </strong>
-            <small>Current location</small>
+            <small>Active Station Coordinates ({current.latitude.toFixed(2)}, {current.longitude.toFixed(2)})</small>
           </div>
-          <b>✓</b>
+          <Check size={20} className="text-emerald-400" />
         </div>
-        <p>
-          Use the location button in the top bar to search for another city.
+        <p className="mt-3 text-sm text-slate-400">
+          Use the location trigger in the top bar to search for any municipality or coordinates worldwide.
         </p>
       </div>
     </section>
@@ -498,11 +647,11 @@ function LocationPage({ current, onChange }) {
 
 function SettingsPage(props) {
   return (
-    <section className="page-section">
+    <section className="page-section" style={{ width: "100%" }}>
       <div className="section-title">
         <div>
-          <h1>Settings</h1>
-          <p>Accessibility and WeatherGPT preferences.</p>
+          <h1>Preferences & Accessibility</h1>
+          <p>Interface ergonomics, measurement units, and session configuration.</p>
         </div>
       </div>
       <div className="settings-page-card">
@@ -510,37 +659,42 @@ function SettingsPage(props) {
           <strong>Appearance</strong>
           <span>Dark mode</span>
           <button
+            type="button"
             className={`switch ${props.dark ? "on" : ""}`}
             onClick={() => props.setDark(!props.dark)}
+            aria-label="Toggle dark mode"
           >
             <i />
           </button>
         </div>
         <div>
           <strong>Language</strong>
-          <span>Assistant language</span>
+          <span>Assistant and translation language</span>
           <select
             value={props.language}
             onChange={(e) => props.setLanguage(e.target.value)}
+            className="form-select"
           >
             <option value="English">English</option>
-            <option value="Hindi">Hindi</option>
-            <option value="Bengali">Bengali</option>
-            <option value="Tamil">Tamil</option>
-            <option value="Telugu">Telugu</option>
+            <option value="Hindi">Hindi (हिन्दी)</option>
+            <option value="Bengali">Bengali (বাংলা)</option>
+            <option value="Tamil">Tamil (தமிழ்)</option>
+            <option value="Telugu">Telugu (తెలుగు)</option>
           </select>
         </div>
         <div>
           <strong>Units</strong>
-          <span>Temperature</span>
+          <span>Temperature measurement</span>
           <div className="small-toggle">
             <button
+              type="button"
               className={props.unit === "C" ? "selected" : ""}
               onClick={() => props.setUnit("C")}
             >
               °C
             </button>
             <button
+              type="button"
               className={props.unit === "F" ? "selected" : ""}
               onClick={() => props.setUnit("F")}
             >
@@ -550,11 +704,16 @@ function SettingsPage(props) {
         </div>
         <div>
           <strong>Account</strong>
-          <span>{props.user?.email || "Guest mode"}</span>
+          <span>{props.user?.email || "Guest Session"}</span>
         </div>
         {props.user && (
-          <button className="logout-btn" onClick={props.onLogout}>
-            Sign out
+          <button
+            type="button"
+            className="btn-glass btn-glass-sm btn-glass-danger"
+            onClick={props.onLogout}
+          >
+            <LogOut size={14} className="inline mr-1 text-rose-400" />
+            Sign Out
           </button>
         )}
       </div>

@@ -1,0 +1,91 @@
+/* Hourly forecast: one flat strip inside one panel, not nested cards. */
+.hourly-forecast--v2 {
+  padding: 18px 20px;
+  border-radius: 18px;
+}
+
+.hourly-forecast--v2 .hourly-forecast-header {
+  margin-bottom: 12px;
+}
+
+.hourly-forecast--v2 .hourly-forecast-header h3 {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.hourly-forecast--v2 .hourly-forecast-header > span {
+  font-size: 11px;
+  color: var(--ink-muted);
+}
+
+.hourly-forecast--v2 .hourly-forecast-scroll {
+  gap: 0;
+  padding-bottom: 4px;
+}
+
+.hourly-forecast--v2 .hourly-card {
+  min-width: 88px;
+  padding: 12px 10px;
+  border: 0;
+  border-right: 1px solid var(--rule);
+  border-radius: 0;
+  background: transparent;
+  scroll-snap-align: start;
+}
+
+.hourly-forecast--v2 .hourly-card:last-child {
+  border-right: 0;
+}
+
+.hourly-forecast--v2 .hourly-card:hover {
+  transform: none;
+  background: color-mix(in srgb, var(--surface-2) 60%, transparent);
+}
+
+.hourly-forecast--v2 .hourly-card--now {
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+  box-shadow: inset 0 2px 0 var(--accent);
+}
+
+.hourly-forecast--v2 .hourly-card--now .hourly-time {
+  color: var(--accent);
+}
+
+.hourly-forecast--v2 .hourly-time {
+  font-size: 11px;
+}
+
+.hourly-forecast--v2 .hourly-temp {
+  font-size: 14px;
+}
+
+.hourly-forecast--v2 .hourly-meta {
+  font-size: 10.5px;
+}
+
+.theme-light .hourly-forecast--v2 .hourly-card {
+  background: transparent;
+  border-color: var(--rule);
+}
+
+.theme-light .hourly-forecast--v2 .hourly-card--now {
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+}
+
+@media (max-width: 600px) {
+  .hourly-forecast--v2 {
+    padding: 14px;
+  }
+
+  .hourly-forecast--v2 .hourly-card {
+    min-width: 82px;
+    padding: 10px 8px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hourly-forecast--v2 .hourly-card {
+    transition: none;
+  }
+}

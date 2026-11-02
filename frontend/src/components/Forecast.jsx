@@ -1,131 +1,142 @@
-import {
-  formatDay,
-  formatDate,
-  formatTemp,
-  weatherMeta,
-} from "../utils/weather";
+import { CalendarDays, Droplets, Wind } from "lucide-react";
+import { formatDate, weatherMeta } from "../utils/weather";
+import WeatherVisual from "./WeatherVisual";
+import "./Forecast.css";
 
-// 1. The small dashboard widget
-export function Forecast({ weather, unit, onOpen }) {
-  const daily = weather?.daily;
-  if (!daily) return null;
-  return (
-    <section className="panel forecast-panel">
-      <div className="panel-head">
-        <div>
-          <h2>7-Day Forecast</h2>
-          <p>A simple look at what is coming.</p>
-        </div>
-        <button onClick={onOpen}>View Full Forecast →</button>
-      </div>
-      <div className="forecast-grid">
-        {daily.time.map((date, i) => {
-          const meta = weatherMeta(daily.weather_code[i]);
-          return (
-            <div className="forecast-card" key={date}>
-              <strong>{i === 0 ? "Today" : formatDay(date)}</strong>
-              <small>{formatDate(date)}</small>
-              <span className="forecast-emoji">{meta[1]}</span>
-              <b>{formatTemp(daily.temperature_2m_max[i], unit)}</b>
-              <span>{formatTemp(daily.temperature_2m_min[i], unit)}</span>
-              <em>♢ {daily.precipitation_probability_max?.[i] ?? 0}%</em>
-            </div>
-          );
-        })}
-      </div>
-    </section>
+function toTemp(value, unit = "C") {
+  if (value == null || Number.isNaN(Number(value))) return null;
+  const numeric = Number(value);
+  return Math.round(unit === "F" ? (numeric * 9) / 5 + 32 : numeric);
+}
+
+function tempLabel(value) {
+  return value == null ? "--" : `${value}°`;
+}
+
+function formatAmount(value) {
+  if (value == null || Number.isNaN(Number(value))) return "--";
+  return `${Math.round(Number(value) * 10) / 10} mm`;
+}
+
+function weekdayLabel(date, index) {
+  if (index === 0) return "Today";
+  if (index === 1) return "Tomorrow";
+  return new Intl.DateTimeFormat("en", { weekday: "long" }).format(
+    new Date(`${date}T12:00:00`),
   );
 }
 
-// 2. The updated full-page detailed forecast
-export function FullForecast({ weather, unit }) {
+// Full-page detailed forecast presented as a single ruled table rather than
+// a stack of cards, so days can be compared vertically.
+export function FullForecast({ weather, unit = "C", location }) {
   const daily = weather?.daily;
-  if (!daily) return null;
+  if (!daily || !daily.time) return null;
+
+  const rows = daily.time.slice(0, 7).map((date, index) => {
+    const code = daily.weather_code?.[index] ?? 0;
+    return {
+      date,
+      index,
+      code,
+      meta: weatherMeta(code),
+      high: toTemp(daily.temperature_2m_max?.[index], unit),
+      low: toTemp(daily.temperature_2m_min?.[index], unit),
+      rainProb: daily.precipitation_probability_max?.[index] ?? 0,
+      rainAmount: daily.rain_sum?.[index] ?? 0,
+      wind: daily.wind_speed_10m_max?.[index],
+    };
+  });
 
   return (
-    <section className="page-section" style={{ width: "100%" }}>
-      <div className="section-title">
+    <section
+      className="page-section forecast-page"
+      aria-labelledby="forecast-title"
+    >
+      <div className="section-title forecast-heading">
         <div>
-          <h1>Forecast</h1>
-          <p>Seven days of detailed weather for your selected location.</p>
+          <div className="flex items-center gap-2">
+            <CalendarDays size={22} className="text-sky-400" aria-hidden="true" />
+            <h1 id="forecast-title">7-Day Forecast</h1>
+          </div>
+          <p>
+            Daily conditions for {location?.name || "your area"} over the next
+            seven days.
+          </p>
         </div>
       </div>
 
       <div
-        className="forecast-list-large"
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          gap: "1rem",
-          marginTop: "2rem",
-        }}
+        className="forecast-panel"
+        role="table"
+        aria-label={`Daily forecast for ${location?.name || "the next seven days"}`}
+        aria-colcount={5}
+        aria-rowcount={rows.length + 1}
       >
-        {daily?.time.map((date, i) => {
-          const meta = weatherMeta(daily.weather_code[i]);
-          const rainProb = daily.precipitation_probability_max?.[i] ?? 0;
-          const windSpeed = daily.wind_speed_10m_max?.[i] ?? "--";
+        <div className="forecast-head" role="row">
+          <span role="columnheader">Day</span>
+          <span role="columnheader">Conditions</span>
+          <span role="columnheader">
+            Temperature
+            <span className="forecast-unit">{unit === "F" ? "°F" : "°C"}</span>
+          </span>
+          <span role="columnheader">Rain</span>
+          <span role="columnheader">Wind</span>
+        </div>
 
+        {rows.map((row) => {
           return (
-            <div
-              className="forecast-row"
-              key={date}
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))",
-                alignItems: "center",
-                padding: "1.5rem",
-                borderRadius: "12px",
-                background: "var(--card-bg, rgba(255, 255, 255, 0.03))",
-                border: "1px solid rgba(255, 255, 255, 0.05)",
-                gap: "1rem",
-              }}
-            >
-              <div>
-                <strong style={{ fontSize: "1.2rem", display: "block" }}>
-                  {i === 0 ? "Today" : formatDay(date)}
-                </strong>
-                <small style={{ opacity: 0.6 }}>{formatDate(date)}</small>
+            <div className="forecast-row" role="row" key={row.date}>
+              <div className="forecast-day" role="cell">
+                <strong>{weekdayLabel(row.date, row.index)}</strong>
+                <span>{formatDate(row.date)}</span>
               </div>
 
-              <div style={{ fontSize: "2.5rem", textAlign: "center" }}>
-                <span title={meta[0]}>{meta[1]}</span>
+              <div className="forecast-cond" role="cell">
+                <span className="forecast-cond__icon" aria-hidden="true">
+                  <WeatherVisual code={row.code} size={30} />
+                </span>
+                <span>{row.meta[0]}</span>
               </div>
 
               <div
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "0.2rem",
-                }}
+                className="forecast-temp"
+                role="cell"
+                title={`High ${tempLabel(row.high)}, low ${tempLabel(row.low)}`}
               >
-                <b style={{ fontSize: "1.2rem" }}>
-                  {formatTemp(daily.temperature_2m_max[i], unit)}
-                </b>
-                <small style={{ opacity: 0.6 }}>
-                  Low: {formatTemp(daily.temperature_2m_min[i], unit)}
-                </small>
+                <span className="forecast-temps">
+                  <span className="forecast-high">
+                    <span className="sr-only">High </span>
+                    {tempLabel(row.high)}
+                  </span>
+                  <span className="forecast-sep" aria-hidden="true">
+                    /
+                  </span>
+                  <span className="forecast-low">
+                    <span className="sr-only">Low </span>
+                    {tempLabel(row.low)}
+                  </span>
+                </span>
               </div>
 
-              <div
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "0.2rem",
-                }}
-              >
-                <span style={{ fontSize: "1.1rem" }}>💧 {rainProb}%</span>
-                <small style={{ opacity: 0.6 }}>Rain Chance</small>
+              <div className="forecast-rain" role="cell">
+                <Droplets
+                  size={14}
+                  aria-hidden="true"
+                  className="text-cyan-400"
+                />
+                <strong>{row.rainProb}%</strong>
+                <span className="forecast-muted">
+                  {formatAmount(row.rainAmount)}
+                </span>
               </div>
 
-              <div
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "0.2rem",
-                }}
-              >
-                <span style={{ fontSize: "1.1rem" }}>💨 {windSpeed} km/h</span>
-                <small style={{ opacity: 0.6 }}>Max Wind</small>
+              <div className="forecast-wind" role="cell">
+                <Wind size={14} aria-hidden="true" className="text-slate-400" />
+                <span>
+                  {row.wind == null
+                    ? "--"
+                    : `${Number(row.wind).toFixed(1)} km/h`}
+                </span>
               </div>
             </div>
           );
@@ -134,3 +145,5 @@ export function FullForecast({ weather, unit }) {
     </section>
   );
 }
+
+export default FullForecast;

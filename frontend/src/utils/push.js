@@ -11,7 +11,7 @@ function urlBase64ToUint8Array(base64String) {
   return outputArray;
 }
 
-export async function subscribeUserToPush(token) {
+export async function subscribeUserToPush() {
   if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
     console.warn("Push messaging is not supported by this browser.");
     return null;

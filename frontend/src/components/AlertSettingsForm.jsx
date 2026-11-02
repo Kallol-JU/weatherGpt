@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { CheckCircle2, AlertCircle, Save, BellRing, Phone } from "lucide-react";
 import { subscribeUserToPush } from "../utils/push";
 import { getApiUrl } from "../services/api";
 
@@ -7,7 +8,7 @@ export function AlertSettingsForm({ authToken, location }) {
   const [smsEnabled, setSmsEnabled] = useState(false);
   const [pushEnabled, setPushEnabled] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  const [message, setMessage] = useState("");
+  const [message, setMessage] = useState({ text: "", type: "" });
 
   const apiUrl = getApiUrl();
   const token =
@@ -26,10 +27,10 @@ export function AlertSettingsForm({ authToken, location }) {
         if (data.success) {
           setPhone(data.phone || "");
           setSmsEnabled(data.alertSettings?.smsEnabled || false);
-          setPushEnabled(data.alertSettings?.pushEnabled || true);
+          setPushEnabled(data.alertSettings?.pushEnabled ?? true);
         }
       } catch (err) {
-        console.error("Failed to load settings");
+        console.error("Failed to load alert settings", err);
       }
     }
     loadSettings();
@@ -39,12 +40,12 @@ export function AlertSettingsForm({ authToken, location }) {
     e.preventDefault();
 
     if (!token) {
-      setMessage("❌ Please sign in to save preferences.");
+      setMessage({ text: "Please sign in to save alert preferences.", type: "error" });
       return;
     }
 
     setIsSaving(true);
-    setMessage("");
+    setMessage({ text: "", type: "" });
 
     try {
       let pushSubscription = null;
@@ -80,12 +81,15 @@ export function AlertSettingsForm({ authToken, location }) {
       const result = await response.json();
 
       if (response.ok && result.success) {
-        setMessage("✅ Alert settings saved successfully!");
+        setMessage({ text: "Alert preferences updated successfully.", type: "success" });
       } else {
-        setMessage(`❌ ${result.error || "Failed to save settings."}`);
+        setMessage({
+          text: result.error || "Failed to update alert settings.",
+          type: "error",
+        });
       }
-    } catch (error) {
-      setMessage("❌ Network error occurred.");
+    } catch {
+      setMessage({ text: "Network error occurred while saving.", type: "error" });
     } finally {
       setIsSaving(false);
     }
@@ -95,64 +99,81 @@ export function AlertSettingsForm({ authToken, location }) {
     <form
       onSubmit={handleSaveAlertSettings}
       className="alert-settings-form"
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        gap: "1rem",
-        maxWidth: "400px",
-      }}
+      aria-labelledby="alert-settings-title"
     >
-      <h3>Emergency Alert Preferences</h3>
+      <div className="form-head">
+        <BellRing size={20} className="text-sky-400" aria-hidden="true" />
+        <div>
+          <h3 id="alert-settings-title">Notification Channels</h3>
+          <p>Configure automated dispatch methods for this location.</p>
+        </div>
+      </div>
 
-      <label
-        style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}
-      >
-        Phone Number (Include Country Code, e.g., +91):
+      <div className="form-group">
+        <label htmlFor="alert-phone-input">
+          <Phone size={14} className="inline mr-1 text-slate-400" />
+          SMS Phone Number (E.164 format with country code)
+        </label>
         <input
+          id="alert-phone-input"
           type="tel"
+          inputMode="tel"
+          autoComplete="tel"
+          placeholder="+919876543210"
           value={phone}
           onChange={(e) => setPhone(e.target.value)}
-          placeholder="+919876543210"
-          style={{ padding: "0.5rem", borderRadius: "6px" }}
+          className="form-input"
         />
-      </label>
+      </div>
 
-      <label style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-        <input
-          type="checkbox"
-          checked={smsEnabled}
-          onChange={(e) => setSmsEnabled(e.target.checked)}
-        />
-        Enable Twilio SMS Alerts
-      </label>
+      <div className="checkbox-row">
+        <label className="checkbox-label">
+          <input
+            type="checkbox"
+            checked={smsEnabled}
+            onChange={(e) => setSmsEnabled(e.target.checked)}
+          />
+          <span>Enable critical SMS hazard notifications</span>
+        </label>
+      </div>
 
-      <label style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-        <input
-          type="checkbox"
-          checked={pushEnabled}
-          onChange={(e) => setPushEnabled(e.target.checked)}
-        />
-        Enable Browser Push Notifications
-      </label>
+      <div className="checkbox-row">
+        <label className="checkbox-label">
+          <input
+            type="checkbox"
+            checked={pushEnabled}
+            onChange={(e) => setPushEnabled(e.target.checked)}
+          />
+          <span>Enable instant browser push alerts</span>
+        </label>
+      </div>
 
-      <button
-        type="submit"
-        disabled={isSaving}
-        style={{
-          padding: "0.75rem",
-          background: "#007BFF",
-          color: "white",
-          borderRadius: "6px",
-          border: "none",
-          cursor: "pointer",
-        }}
-      >
-        {isSaving ? "Saving..." : "Save Preferences"}
-      </button>
-
-      {message && (
-        <p style={{ marginTop: "0.5rem", fontSize: "0.9rem" }}>{message}</p>
+      {message.text && (
+        <div
+          className={`alert-status-banner ${message.type}`}
+          role={message.type === "error" ? "alert" : "status"}
+        >
+          {message.type === "success" ? (
+            <CheckCircle2 size={16} className="text-emerald-400 shrink-0" />
+          ) : (
+            <AlertCircle size={16} className="text-rose-400 shrink-0" />
+          )}
+          <span>{message.text}</span>
+        </div>
       )}
+
+      <div className="form-actions mt-3">
+        <button
+          type="submit"
+          disabled={isSaving}
+          className="btn-glass btn-glass-sm btn-glass-cyan"
+        >
+          <Save size={14} className="inline mr-1" />
+          {isSaving ? "Saving..." : "Save Preferences"}
+        </button>
+      </div>
     </form>
   );
 }
+
+export default AlertSettingsForm;
