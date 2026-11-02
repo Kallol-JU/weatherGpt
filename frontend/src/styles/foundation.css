@@ -1,0 +1,1359 @@
+/* ==========================================================================
+   WeatherGPT — styling foundation
+   --------------------------------------------------------------------------
+   Loaded after App.css. This file does three jobs:
+
+   1. Codifies the existing palette / type / spacing into semantic tokens.
+   2. Completes styles for the redesigned markup that never got CSS.
+   3. Repairs the light theme, responsive shell, and accessibility gaps.
+
+   App.css is intentionally left untouched while the visual redesign is still
+   being worked on. Once that settles, this layer can be folded back into
+   App.css section by section.
+   ========================================================================== */
+
+/* ==========================================================================
+   1. Tokens
+   ========================================================================== */
+
+:root {
+  /* Surfaces and ink (aliases keep the existing palette authoritative) */
+  --surface-0: var(--bg);
+  --surface-1: var(--panel);
+  --surface-2: var(--panel2);
+  --surface-3: var(--panel3);
+  --ink: var(--text);
+  --ink-muted: var(--muted);
+  --rule: var(--line);
+  --brand: var(--blue);
+  --accent: var(--cyan);
+  --ok: var(--green);
+  --warn: #fbbf24;
+  --focus: #38bdf8;
+
+  /* Type */
+  --font-ui: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
+  --text-2xs: 0.6875rem; /* 11px */
+  --text-xs: 0.75rem; /* 12px */
+  --text-sm: 0.8125rem; /* 13px */
+  --text-md: 0.875rem; /* 14px */
+  --text-lg: 1rem; /* 16px */
+  --text-xl: 1.25rem; /* 20px */
+  --text-2xl: 1.625rem; /* 26px */
+  --text-3xl: 2.125rem; /* 34px */
+  --text-display: clamp(3rem, 7vw, 4.5rem);
+  --leading-body: 1.6;
+  --tracking-display: -0.02em;
+
+  /* Space */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --space-8: 64px;
+
+  /* Shape */
+  --r-xs: 8px;
+  --r-sm: 12px;
+  --r-md: 16px;
+  --r-lg: 20px;
+  --r-pill: 999px;
+
+  /* Motion */
+  --dur-fast: 120ms;
+  --dur-base: 180ms;
+  --dur-slow: 280ms;
+  --dur-emphasis: 380ms;
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+
+  /* Shell */
+  --sidebar-w: 246px;
+  --topbar-h: 82px;
+  --chat-w: 420px;
+  --content-max: 1500px;
+  --gutter: clamp(12px, 2vw, 20px);
+  --chat-h: clamp(
+    420px,
+    calc(100dvh - var(--topbar-h) - 40px),
+    900px
+  );
+}
+
+.theme-light {
+  --ink-muted: #5d6f84;
+  --ok: #15803d;
+  --warn: #b45309;
+  --danger: #b42318;
+  --accent: #0284c7;
+  --focus: #0284c7;
+}
+
+/* ==========================================================================
+   2. Base: root chrome, focus, skip link, reduced motion
+   ========================================================================== */
+
+html {
+  background: #071321;
+}
+
+html.theme-light {
+  background: #eaf1f9;
+}
+
+html.dark {
+  color-scheme: dark;
+}
+
+html.theme-light {
+  color-scheme: light;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--focus) 32%, transparent);
+  color: var(--ink);
+}
+
+:where(a, button, summary, [role="button"], [tabindex]):focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.skip-link {
+  position: fixed;
+  top: 10px;
+  left: 10px;
+  z-index: 10001;
+  transform: translateY(-160%);
+  padding: 10px 14px;
+  border-radius: var(--r-sm);
+  background: var(--brand);
+  color: #ffffff;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  text-decoration: none;
+  transition: transform var(--dur-base) var(--ease);
+}
+
+.skip-link:focus {
+  transform: translateY(0);
+}
+
+.modal-layer {
+  z-index: 1200;
+}
+
+.sidebar-scrim {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 999;
+  padding: 0;
+  border: 0;
+  background: rgba(3, 10, 18, 0.55);
+  backdrop-filter: blur(2px);
+  cursor: default;
+}
+
+/* ==========================================================================
+   3. Shell: sidebar, topbar, chat frame, page rhythm
+   ========================================================================== */
+
+.sidebar {
+  width: var(--sidebar-w);
+  min-width: var(--sidebar-w);
+  background: linear-gradient(180deg, rgba(6, 20, 34, 0.97), rgba(5, 19, 33, 0.96));
+}
+
+.side-nav {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-right: 2px;
+}
+
+.sidebar-bottom {
+  padding-top: var(--space-2);
+}
+
+.side-location,
+.theme-control {
+  min-width: 0;
+}
+
+.brand-title {
+  white-space: nowrap;
+}
+
+.sidebar-close {
+  display: none;
+  position: absolute;
+  top: 18px;
+  right: 12px;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  border: 1px solid var(--rule);
+  border-radius: 10px;
+  background: var(--surface-2);
+  color: var(--ink);
+}
+
+.location-labels {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.location-labels strong,
+.location-labels small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.theme-icon {
+  display: grid;
+  place-items: center;
+  color: var(--ink-muted);
+}
+
+.topbar {
+  height: var(--topbar-h);
+  gap: var(--space-3);
+}
+
+.top-actions {
+  flex: none;
+}
+
+.top-search {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.search-icon {
+  flex: none;
+}
+
+.dashboard {
+  max-width: var(--content-max);
+  padding: var(--gutter);
+}
+
+.page-section {
+  max-width: 1100px;
+  padding: calc(var(--gutter) + 4px) var(--gutter) 48px;
+}
+
+.dashboard-welcome {
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.dashboard-welcome h1 {
+  font-size: clamp(1.35rem, 3vw, 1.7rem);
+}
+
+.section-title {
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.section-title > div {
+  min-width: 0;
+}
+
+.section-title h1 {
+  font-size: clamp(1.35rem, 3.4vw, 1.7rem);
+}
+
+/* Chat column */
+.chat-layout-grid {
+  grid-template-columns: minmax(0, 1fr) var(--chat-w);
+  align-items: start;
+}
+
+.weather-widgets-column,
+.chat-panel-column {
+  min-width: 0;
+}
+
+.chat-panel {
+  height: var(--chat-h);
+  min-height: 0;
+  top: calc(var(--topbar-h) + 12px);
+}
+
+.chat-scroll {
+  scrollbar-gutter: stable;
+}
+
+.chat-message > section {
+  min-width: 0;
+}
+
+.chat-empty {
+  padding-top: clamp(32px, 8vh, 80px);
+}
+
+.chat-empty-icon {
+  display: grid;
+  place-items: center;
+  margin-bottom: var(--space-1);
+}
+
+.chat-empty-cta {
+  margin-top: var(--space-4);
+}
+
+.chat-input textarea {
+  font-size: var(--text-sm);
+}
+
+.user-avatar {
+  width: 31px;
+  height: 31px;
+  border-radius: 10px;
+  background: var(--surface-3);
+  display: grid;
+  place-items: center;
+  flex: none;
+}
+
+.chat-input .send.stop-btn {
+  background: rgba(239, 68, 68, 0.16);
+  border: 1px solid rgba(239, 68, 68, 0.32);
+  box-shadow: none;
+}
+
+/* ==========================================================================
+   4. Missing component styles
+   ========================================================================== */
+
+/* Weather hero ------------------------------------------------------------ */
+.weather-visual,
+.visual-clear,
+.visual-mostly-clear,
+.visual-partly-cloudy,
+.visual-cloudy,
+.visual-fog,
+.visual-drizzle,
+.visual-rain,
+.visual-snow,
+.visual-thunderstorm,
+.visual-default {
+  display: grid;
+  place-items: center;
+  line-height: 0;
+}
+
+.weather-overview-loading {
+  min-height: 280px;
+  display: grid;
+  place-items: center;
+  background: var(--surface-1);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-lg);
+}
+
+.location-pin-icon {
+  display: grid;
+  place-items: center;
+}
+
+.glass-weather-container {
+  transition: border-color var(--dur-slow) ease, box-shadow var(--dur-slow) ease;
+}
+
+.glass-weather-container--light {
+  border-color: rgba(35, 73, 111, 0.12);
+}
+
+/* Markdown inside chat bubbles and history -------------------------------- */
+.bubble > :first-child,
+.history-details > :first-child {
+  margin-top: 0;
+}
+
+.bubble > :last-child,
+.history-details > :last-child {
+  margin-bottom: 0;
+}
+
+.bubble p,
+.history-details p {
+  margin: 0.45em 0;
+}
+
+.bubble ul,
+.bubble ol,
+.history-details ul,
+.history-details ol {
+  margin: 0.5em 0;
+  padding-left: 1.35em;
+}
+
+.bubble li + li,
+.history-details li + li {
+  margin-top: 0.25em;
+}
+
+.bubble a,
+.history-details a {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.bubble a:hover,
+.history-details a:hover {
+  color: var(--ink);
+}
+
+.bubble code,
+.history-details code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.88em;
+  background: var(--surface-3);
+  border: 1px solid var(--rule);
+  border-radius: 5px;
+  padding: 0.1em 0.35em;
+}
+
+.bubble pre,
+.history-details pre {
+  margin: 0.7em 0;
+  padding: 12px 14px;
+  background: var(--surface-3);
+  border: 1px solid var(--rule);
+  border-radius: 10px;
+  overflow-x: auto;
+  max-width: 100%;
+}
+
+.bubble pre code,
+.history-details pre code {
+  background: transparent;
+  border: 0;
+  padding: 0;
+  font-size: 0.85em;
+}
+
+.bubble h1,
+.bubble h2,
+.bubble h3,
+.bubble h4,
+.history-details h1,
+.history-details h2,
+.history-details h3,
+.history-details h4 {
+  margin: 0.85em 0 0.35em;
+  line-height: 1.25;
+  font-size: 1.08em;
+}
+
+.bubble table,
+.history-details table {
+  width: 100%;
+  border-collapse: collapse;
+  display: block;
+  overflow-x: auto;
+  margin: 0.6em 0;
+}
+
+.bubble th,
+.bubble td,
+.history-details th,
+.history-details td {
+  border: 1px solid var(--rule);
+  padding: 6px 8px;
+  text-align: left;
+}
+
+.bubble blockquote,
+.history-details blockquote {
+  margin: 0.6em 0;
+  padding: 2px 0 2px 12px;
+  border-left: 2px solid var(--accent);
+  color: var(--ink-muted);
+}
+
+.bubble hr,
+.history-details hr {
+  border: 0;
+  border-top: 1px solid var(--rule);
+  margin: 0.8em 0;
+}
+
+.bubble img,
+.history-details img {
+  max-width: 100%;
+  height: auto;
+  border-radius: var(--r-xs);
+}
+
+/* Alert settings form ----------------------------------------------------- */
+.alert-settings-wrapper {
+  width: 100%;
+  margin-top: var(--space-6);
+}
+
+.alerts-page-container {
+  width: 100%;
+}
+
+.alert-settings-form {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-5);
+  background: var(--surface-1);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-dark);
+}
+
+.form-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.form-head h3 {
+  margin: 0;
+  font-size: var(--text-lg);
+}
+
+.form-head p {
+  margin: 2px 0 0;
+  font-size: var(--text-xs);
+  color: var(--ink-muted);
+}
+
+.form-group {
+  display: grid;
+  gap: 6px;
+}
+
+.form-group label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--text-xs);
+  color: var(--ink-muted);
+}
+
+.form-input,
+.form-select {
+  width: 100%;
+  min-height: 42px;
+  padding: 10px 12px;
+  background: var(--surface-3);
+  color: var(--ink);
+  border: 1px solid var(--rule);
+  border-radius: 10px;
+  font-size: var(--text-sm);
+  box-shadow: var(--inset);
+}
+
+.form-input::placeholder {
+  color: var(--ink-muted);
+}
+
+.checkbox-row {
+  display: flex;
+  align-items: center;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--text-xs);
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.checkbox-label input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--brand);
+}
+
+.alert-status-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-size: var(--text-xs);
+}
+
+.alert-status-banner.success {
+  background: rgba(34, 197, 94, 0.12);
+  border: 1px solid rgba(34, 197, 94, 0.28);
+  color: var(--ok);
+}
+
+.alert-status-banner.error {
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #fecdd3;
+}
+
+.theme-light .alert-status-banner.error {
+  color: var(--danger);
+}
+
+.form-actions {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+/* History ----------------------------------------------------------------- */
+.history-item-wrapper {
+  margin: 6px 0;
+  background: var(--surface-2);
+  border: 1px solid transparent;
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.history-item-wrapper.open {
+  border-color: var(--rule);
+}
+
+.history-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  padding: 0 10px 0 0;
+  margin: 0;
+  background: transparent;
+  border: 0;
+  border-radius: 14px;
+  text-align: left;
+  color: var(--ink);
+}
+
+.history-main {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  padding: 14px;
+  border: 0;
+  border-radius: 14px;
+  background: transparent;
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+}
+
+.history-main:hover {
+  background: color-mix(in srgb, var(--ink) 4%, transparent);
+}
+
+.history-content-col {
+  display: block;
+  min-width: 0;
+}
+
+.history-content-col strong {
+  display: block;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.history-content-col small {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 3px;
+  font-size: var(--text-2xs);
+  color: var(--ink-muted);
+}
+
+.expand-btn {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 10px;
+  border: 1px solid var(--rule);
+  border-radius: var(--r-pill);
+  background: var(--surface-3);
+  color: var(--ink-muted);
+  font-size: var(--text-2xs);
+  font-weight: 600;
+}
+
+.expand-btn:hover {
+  color: var(--ink);
+  border-color: color-mix(in srgb, var(--ink) 22%, transparent);
+}
+
+.history-details {
+  padding: 14px 16px 18px 50px;
+  border-top: 1px solid var(--rule);
+  color: var(--ink);
+  font-size: var(--text-sm);
+  line-height: var(--leading-body);
+}
+
+.empty-state {
+  padding: 28px 20px;
+  text-align: center;
+  color: var(--ink-muted);
+  border: 1px dashed var(--rule);
+  border-radius: var(--r-md);
+  font-size: var(--text-sm);
+}
+
+/* Advisories -------------------------------------------------------------- */
+.advisory-tabs {
+  flex-wrap: wrap;
+}
+
+.advisory-tab-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.advisory-card-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.advisory-card-header > div {
+  min-width: 0;
+}
+
+.advisory-actions-group {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 10px;
+  margin-top: var(--space-4);
+}
+
+/* Voice ------------------------------------------------------------------- */
+.voice-mic-trigger {
+  display: grid;
+  place-items: center;
+}
+
+.voice-lang-tag {
+  display: block;
+  margin-top: var(--space-3);
+}
+
+/* Forecast rows ----------------------------------------------------------- */
+.forecast-row-card {
+  grid-template-columns:
+    minmax(110px, 0.9fr) minmax(170px, 1.2fr)
+    minmax(110px, 0.8fr) minmax(240px, 1.4fr);
+  gap: 14px;
+}
+
+.forecast-icon-col {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.forecast-icon-col .weather-visual {
+  flex: none;
+}
+
+.forecast-temp-value {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.forecast-temp-col small {
+  color: var(--ink-muted);
+}
+
+/* Alerts ------------------------------------------------------------------ */
+.alert-cards-grid {
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+}
+
+.alert-item-head {
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.alert-item-head > div {
+  min-width: 0;
+}
+
+.alert-hero-banner {
+  flex-wrap: wrap;
+}
+
+.alert-hero-action {
+  margin-left: auto;
+}
+
+/* Map --------------------------------------------------------------------- */
+.map-frame-wrapper {
+  height: clamp(420px, 68vh, 720px);
+}
+
+/* Hourly ------------------------------------------------------------------ */
+.hourly-forecast-container {
+  padding: 18px;
+}
+
+.hourly-forecast-scroll {
+  scroll-snap-type: x proximity;
+  overscroll-behavior-x: contain;
+  padding-bottom: 10px;
+}
+
+.hourly-card {
+  scroll-snap-align: start;
+}
+
+.hourly-forecast-scroll:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+  border-radius: var(--r-sm);
+}
+
+/* Small pieces ------------------------------------------------------------ */
+.anomaly-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: var(--r-pill);
+  background: rgba(251, 191, 36, 0.12);
+  border: 1px solid rgba(251, 191, 36, 0.25);
+  font-size: var(--text-2xs);
+}
+
+.about-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 7px 11px;
+  border-radius: var(--r-pill);
+  background: var(--surface-2);
+  border: 1px solid var(--rule);
+  font-size: var(--text-2xs);
+}
+
+/* ==========================================================================
+   5. Type floors and numeric alignment
+   ========================================================================== */
+
+.chat-message small {
+  font-size: var(--text-2xs);
+  color: var(--ink-muted);
+}
+
+.chat-disclaimer {
+  font-size: var(--text-2xs);
+  line-height: 1.5;
+  color: var(--ink-muted);
+}
+
+.chat-quick button {
+  font-size: var(--text-2xs);
+}
+
+.login-hint {
+  font-size: var(--text-2xs);
+}
+
+.aqi-pill-label {
+  font-size: var(--text-2xs);
+}
+
+.weather-status-tag {
+  font-size: var(--text-2xs);
+}
+
+.hourly-meta {
+  font-size: var(--text-2xs);
+}
+
+.quick-stat-box small {
+  font-size: var(--text-2xs);
+}
+
+.metric-pill {
+  font-size: var(--text-xs);
+}
+
+.status-badge {
+  font-size: var(--text-2xs);
+  white-space: nowrap;
+}
+
+.temp-large {
+  font-size: var(--text-display);
+  letter-spacing: var(--tracking-display);
+  font-variant-numeric: tabular-nums;
+}
+
+.hourly-temp,
+.temp-bound-item,
+.aqi-indicator-pill strong {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Small print that was below the 11px legibility floor. */
+.chat-head p,
+.form-error,
+.switch-auth,
+.modal-label,
+.location-search button,
+.current-location-btn,
+.side-location small,
+.login-hint {
+  font-size: var(--text-2xs);
+}
+
+.switch-auth {
+  color: var(--accent);
+}
+
+.theme-light .switch-auth {
+  color: #0369a1;
+}
+
+/* ==========================================================================
+   6. Light theme parity for the glass layer
+   ========================================================================== */
+
+.theme-light .glass-weather-container {
+  border-color: rgba(35, 73, 111, 0.14);
+  box-shadow: 0 16px 40px rgba(73, 99, 125, 0.16);
+}
+
+.theme-light .quick-stat-box,
+.theme-light .hourly-card,
+.theme-light .map-layer-selector,
+.theme-light .alert-item-card,
+.theme-light .not-found-card,
+.theme-light .forecast-row-card,
+.theme-light .metric-pill {
+  background: rgba(255, 255, 255, 0.55);
+  border-color: var(--rule);
+}
+
+.theme-light .hourly-forecast-container {
+  background: rgba(255, 255, 255, 0.5);
+  border-color: var(--rule);
+}
+
+.theme-light .hourly-card--now {
+  background: rgba(2, 132, 199, 0.08);
+  border-color: rgba(2, 132, 199, 0.32);
+}
+
+.theme-light .weather-actions-bar {
+  border-top-color: var(--rule);
+}
+
+.theme-light .map-frame-wrapper {
+  border-color: var(--rule);
+}
+
+.theme-light .text-white {
+  color: var(--ink);
+}
+
+.theme-light .text-slate-300,
+.theme-light .text-slate-400,
+.theme-light .text-slate-500 {
+  color: #5b6b80;
+}
+
+.theme-light .text-sky-200,
+.theme-light .text-sky-300,
+.theme-light .text-sky-400 {
+  color: #0369a1;
+}
+
+.theme-light .text-cyan-400 {
+  color: #0e7490;
+}
+
+.theme-light .text-emerald-400 {
+  color: #047857;
+}
+
+.theme-light .text-amber-300,
+.theme-light .text-amber-400 {
+  color: #b45309;
+}
+
+.theme-light .text-rose-400 {
+  color: #be123c;
+}
+
+.theme-light .text-indigo-400 {
+  color: #4338ca;
+}
+
+.theme-light .text-violet-400 {
+  color: #6d28d9;
+}
+
+/* Small coloured labels need darker ink on light surfaces. */
+.theme-light .eyebrow,
+.theme-light .login-hint,
+.theme-light .weather-quick-links button {
+  color: #0369a1;
+}
+
+.theme-light .hourly-time {
+  color: var(--ink-muted);
+}
+
+.theme-light .hourly-card--now .hourly-time {
+  color: #075985;
+}
+
+.theme-light .aqi-indicator-pill strong,
+.theme-light .aqi-indicator-pill .aqi-pill-status {
+  filter: brightness(0.7) saturate(1.15);
+}
+
+.theme-light .badge-normal {
+  color: #15803d;
+  border-color: rgba(21, 128, 61, 0.35);
+}
+
+.theme-light .badge-neutral {
+  color: #475569;
+  border-color: rgba(71, 85, 105, 0.35);
+}
+
+.theme-light .badge-advisory {
+  color: #b91c1c;
+  border-color: rgba(185, 28, 28, 0.35);
+}
+
+.theme-light .alert-hero--safe .alert-hero-pill {
+  color: #15803d;
+}
+
+.theme-light .alert-hero--danger .alert-hero-pill {
+  color: #b91c1c;
+}
+
+.theme-light .advisory-good {
+  color: #15803d;
+}
+
+.theme-light .climate-head b {
+  color: #b91c1c;
+}
+
+.theme-light .form-error {
+  color: #b91c1c;
+}
+
+.theme-light .layer-btn--active {
+  color: var(--ink);
+}
+
+.theme-light .switch {
+  background: #cbd5e1;
+}
+
+.theme-light .switch i {
+  background: #ffffff;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.25);
+}
+
+.theme-light .switch.on {
+  background: var(--brand);
+}
+
+/* ==========================================================================
+   7. Responsive shell
+   ========================================================================== */
+
+@media (max-width: 1280px) {
+  :root {
+    --sidebar-w: 220px;
+    --chat-w: 380px;
+  }
+}
+
+@media (max-width: 1024px) {
+  :root {
+    --topbar-h: 72px;
+  }
+
+  .chat-layout-grid {
+    display: flex;
+    flex-direction: column;
+    height: auto;
+    gap: var(--space-4);
+  }
+
+  .chat-panel-column,
+  .weather-widgets-column {
+    width: 100%;
+  }
+
+  .chat-panel {
+    position: relative;
+    top: auto;
+    height: min(60dvh, 620px);
+    min-height: 0;
+  }
+}
+
+@media (max-width: 980px) {
+  :root {
+    --sidebar-w: 76px;
+  }
+}
+
+@media (max-width: 900px) {
+  .forecast-row-card {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .forecast-metrics-col {
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+}
+
+@media (max-width: 768px) {
+  :root {
+    --topbar-h: 64px;
+  }
+
+  .sidebar {
+    display: flex !important;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 260px;
+    min-width: 260px;
+    height: 100dvh;
+    transform: translateX(-100%);
+    visibility: hidden;
+    box-shadow: 4px 0 15px rgba(0, 0, 0, 0.5);
+    transition: transform var(--dur-slow) var(--ease), visibility 0s 0.28s;
+  }
+
+  .sidebar.open {
+    transform: translateX(0);
+    visibility: visible;
+    transition: transform var(--dur-slow) var(--ease), visibility 0s;
+  }
+
+  .sidebar-scrim {
+    display: block;
+  }
+
+  .mobile-menu {
+    display: block;
+  }
+
+  /* The drawer is wide enough for labels; undo the icon-rail collapse. */
+  .brand {
+    justify-content: flex-start;
+    padding-left: 11px;
+  }
+
+  .brand span:last-child {
+    display: inline;
+  }
+
+  .side-item {
+    justify-content: flex-start;
+    padding: 0 16px;
+  }
+
+  .side-item span:nth-child(2),
+  .side-item .side-label,
+  .theme-control strong,
+  .side-location span:nth-child(2),
+  .side-location .chevron {
+    display: block;
+  }
+
+  .nav-badge {
+    display: inline-block;
+  }
+
+  .side-location {
+    display: grid;
+  }
+
+  .unit-control {
+    display: flex;
+  }
+
+  .theme-control {
+    justify-content: flex-start;
+  }
+
+  .sidebar-close {
+    display: grid;
+  }
+
+  .language-control {
+    display: none;
+  }
+
+  .auth-btn {
+    display: none !important;
+  }
+
+  .topbar {
+    gap: 10px;
+    padding: 10px 12px;
+  }
+
+  .dashboard {
+    padding: 12px;
+  }
+
+  .page-section {
+    padding: 16px 12px 32px;
+  }
+
+  .chat-panel {
+    height: 60dvh;
+  }
+
+  .chat-disclaimer {
+    display: none;
+  }
+}
+
+@media (max-width: 600px) {
+  .forecast-row-card {
+    grid-template-columns: 1fr;
+  }
+
+  .weather-quick-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    min-width: 0;
+  }
+
+  .glass-weather-inner {
+    padding: 18px;
+  }
+
+  .modal-layer {
+    padding: 0;
+    place-items: end center;
+  }
+
+  .auth-card,
+  .location-card,
+  .settings-card {
+    width: 100%;
+    max-width: 100%;
+    max-height: 92dvh;
+    border-radius: 20px 20px 0 0;
+    overflow-y: auto;
+  }
+}
+
+@media (max-width: 360px) {
+  .weather-quick-stats {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 520px) {
+  .top-actions {
+    gap: 6px;
+  }
+
+  .top-actions .settings-control {
+    display: none;
+  }
+
+  .section-title h1 {
+    font-size: 1.3rem;
+  }
+
+  .alert-hero-action {
+    width: 100%;
+    margin-left: 0;
+  }
+
+  .alert-hero-action .btn-glass {
+    width: 100%;
+  }
+}
+
+/* ==========================================================================
+   8. Motion preferences
+   ========================================================================== */
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-spin-slow,
+  .animate-pulse,
+  .live-indicator-dot,
+  .typing-caret,
+  .typing i {
+    animation: none !important;
+  }
+
+  .skip-link,
+  .hourly-card,
+  .forecast-row-card,
+  .btn-glass,
+  .sidebar {
+    transition: none !important;
+  }
+
+  html {
+    scroll-behavior: auto;
+  }
+}

@@ -1,0 +1,92 @@
+/* ==========================================================================
+   WeatherGPT — utility bridge
+   --------------------------------------------------------------------------
+   The JSX in this project already uses a small set of Tailwind-style class
+   names, but Tailwind is not part of the build. This file implements only the
+   utilities that are actually referenced, so layout behaves as the markup
+   intends without adding a styling framework.
+
+   Keep this file small. It is a compatibility bridge: when the visual pass is
+   finished, these classes should either be replaced with semantic classes or
+   the project can adopt Tailwind and delete this file (the names match).
+   ========================================================================== */
+
+/* Layout ------------------------------------------------------------------ */
+.flex { display: flex; }
+.flex-col { flex-direction: column; }
+.inline { display: inline; }
+.relative { position: relative; }
+.z-10 { z-index: 10; }
+.shrink-0 { flex-shrink: 0; }
+.w-full { width: 100%; }
+.items-center { align-items: center; }
+.items-start { align-items: flex-start; }
+.items-baseline { align-items: baseline; }
+.justify-center { justify-content: center; }
+
+/* Spacing (Tailwind scale) ------------------------------------------------ */
+.gap-1 { gap: 0.25rem; }
+.gap-2 { gap: 0.5rem; }
+.gap-3 { gap: 0.75rem; }
+.gap-4 { gap: 1rem; }
+
+.mt-0\.5 { margin-top: 0.125rem; }
+.mt-1 { margin-top: 0.25rem; }
+.mt-2 { margin-top: 0.5rem; }
+.mt-3 { margin-top: 0.75rem; }
+.mt-4 { margin-top: 1rem; }
+.mt-8 { margin-top: 2rem; }
+
+.mr-1 { margin-right: 0.25rem; }
+.mr-2 { margin-right: 0.5rem; }
+.mr-3 { margin-right: 0.75rem; }
+.ml-1 { margin-left: 0.25rem; }
+
+/* Type -------------------------------------------------------------------- */
+.font-bold { font-weight: 700; }
+.text-xs { font-size: var(--text-xs); line-height: 1.45; }
+.text-sm { font-size: var(--text-sm); line-height: 1.5; }
+.text-lg { font-size: 1.125rem; line-height: 1.5; }
+
+.opacity-60 { opacity: 0.6; }
+.opacity-70 { opacity: 0.7; }
+
+/* Icon / status colours --------------------------------------------------- */
+.text-white { color: #ffffff; }
+.text-muted { color: var(--ink-muted); }
+
+.text-sky-200 { color: #bae6fd; }
+.text-sky-300 { color: #7dd3fc; }
+.text-sky-400 { color: #38bdf8; }
+.text-slate-300 { color: #cbd5e1; }
+.text-slate-400 { color: #94a3b8; }
+.text-slate-500 { color: #64748b; }
+.text-amber-300 { color: #fcd34d; }
+.text-amber-400 { color: #fbbf24; }
+.text-rose-400 { color: #fb7185; }
+.text-cyan-400 { color: #22d3ee; }
+.text-emerald-400 { color: #34d399; }
+.text-indigo-400 { color: #818cf8; }
+.text-violet-400 { color: #a78bfa; }
+
+/* Motion ------------------------------------------------------------------ */
+.animate-pulse { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+.animate-spin-slow { animation: spin-slow 18s linear infinite; }
+
+@keyframes spin-slow {
+  to { transform: rotate(360deg); }
+}
+
+/* Responsive -------------------------------------------------------------- */
+@media (min-width: 640px) {
+  .sm\:flex-row { flex-direction: row; }
+  .sm\:items-center { align-items: center; }
+  .sm\:justify-between { justify-content: space-between; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-pulse,
+  .animate-spin-slow {
+    animation: none;
+  }
+}

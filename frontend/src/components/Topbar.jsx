@@ -1,98 +1,79 @@
+import { Menu, Search, Settings, LogIn, LogOut } from "lucide-react";
+import ThemeToggle from "./ThemeToggle";
+
 export function Topbar({
   location,
   onLocation,
-  language,
-  setLanguage,
   onProfile,
   mobileMenu,
+  menuOpen = false,
+  dark,
+  onToggleTheme,
   user,
   onLogin,
   onLogout,
 }) {
-  const shortLang =
-    {
-      English: "EN",
-      Hindi: "HI",
-      Bengali: "BN",
-      Tamil: "TA",
-      Telugu: "TE",
-    }[language] || "EN";
-
   return (
-    <header className="topbar">
-      <button className="mobile-menu" onClick={mobileMenu}>
-        ☰
+    <header className="topbar" aria-label="Top bar">
+      <button
+        type="button"
+        className="mobile-menu"
+        onClick={mobileMenu}
+        aria-label="Toggle navigation menu"
+        aria-expanded={menuOpen}
+        aria-controls="primary-navigation"
+      >
+        <Menu size={20} />
       </button>
 
       <button
+        type="button"
         className="top-search"
         onClick={onLocation}
         title={location.name || "Search city..."}
+        aria-label="Search city or location"
       >
-        <span className="search-icon">⌕</span>
+        <Search size={16} className="search-icon text-slate-400" />
         <span className="location-text">
-          {location.name || "Search city..."}
+          {location.name ? `${location.name}, ${location.country || "India"}` : "Search city..."}
         </span>
       </button>
 
-      <div
-        className="top-actions"
-        style={{ display: "flex", alignItems: "center", gap: "8px" }}
-      >
-        <button className="round-control" onClick={onLocation} title="Location">
-          ◉
-        </button>
+      <div className="top-actions">
+        <ThemeToggle dark={dark} onToggle={onToggleTheme} />
 
         <button
-          className="language-control"
-          onClick={() =>
-            setLanguage(language === "English" ? "Hindi" : "English")
-          }
+          type="button"
+          className="round-control settings-control"
+          onClick={onProfile}
+          title="Open settings"
+          aria-label="Settings"
         >
-          🌐 {shortLang}
-        </button>
-
-        <button className="round-control" onClick={onProfile} title="Settings">
-          ⚙
+          <Settings size={16} />
         </button>
 
         {user ? (
           <button
-            className="auth-btn"
+            type="button"
+            className="btn-glass btn-glass-sm btn-glass-danger auth-btn"
             onClick={onLogout}
-            style={{
-              padding: "0.4rem 1rem",
-              borderRadius: "20px",
-              border: "1px solid var(--border-color, #ccc)",
-              background: "transparent",
-              cursor: "pointer",
-              fontWeight: "600",
-              fontSize: "0.85rem",
-              marginLeft: "4px",
-            }}
           >
-            Logout
+            <LogOut size={14} className="inline mr-1 text-rose-400" />
+            Sign Out
           </button>
         ) : (
           <button
-            className="auth-btn"
+            type="button"
+            className="btn-glass btn-glass-sm auth-btn"
             onClick={onLogin}
-            style={{
-              padding: "0.4rem 1rem",
-              borderRadius: "20px",
-              background: "#007BFF",
-              color: "white",
-              border: "none",
-              cursor: "pointer",
-              fontWeight: "600",
-              fontSize: "0.85rem",
-              marginLeft: "4px",
-            }}
           >
-            Sign In / Sign Up
+            <LogIn size={14} className="inline mr-1 text-sky-400" />
+            Sign In
           </button>
         )}
       </div>
     </header>
   );
 }
+
+export default Topbar;

@@ -1,5 +1,12 @@
 import { useState } from "react";
 import ReactMarkdown from "react-markdown";
+import {
+  History as HistoryIcon,
+  MessageSquare,
+  ChevronDown,
+  ChevronUp,
+  Clock,
+} from "lucide-react";
 
 export function History({ history = [], onSelect }) {
   const [expandedIndex, setExpandedIndex] = useState(null);
@@ -24,84 +31,78 @@ export function History({ history = [], onSelect }) {
     }
   }
 
-  const toggleExpand = (e, index) => {
-    e.stopPropagation(); // Prevents triggering onSelect when expanding
-    setExpandedIndex(expandedIndex === index ? null : index);
-  };
-
   return (
-    <section className="page-section">
+    <section className="page-section" style={{ width: "100%" }}>
       <div className="section-title">
         <div>
-          <h1>Chat history</h1>
-          <p>Continue a previous WeatherGPT conversation.</p>
+          <div className="flex items-center gap-2">
+            <HistoryIcon size={24} className="text-sky-400" aria-hidden="true" />
+            <h1>Query History & Archives</h1>
+          </div>
+          <p>Review and resume previously synthesized meteorological sessions.</p>
         </div>
       </div>
 
       <div className="history-card">
         {pairs.length === 0 ? (
-          <div className="empty-state">No saved conversations yet.</div>
+          <div className="empty-state">
+            No archived consultations yet. Ask the assistant a question and it
+            will appear here.
+          </div>
         ) : (
           pairs.map((item, i) => {
             const isExpanded = expandedIndex === i;
+            const detailsId = `history-answer-${i}`;
 
             return (
               <div
-                key={i}
+                key={item.id ?? i}
                 className={`history-item-wrapper ${isExpanded ? "open" : ""}`}
-                style={{ borderBottom: "1px solid rgba(255, 255, 255, 0.08)" }}
               >
-                <div
-                  className="history-row"
-                  onClick={() => onSelect && onSelect(item.question)}
-                  style={{
-                    cursor: "pointer",
-                    display: "flex",
-                    alignItems: "center",
-                    width: "100%",
-                  }}
-                >
-                  <span style={{ marginRight: "12px" }}>💬</span>
-                  <div style={{ flex: 1, textAlign: "left" }}>
-                    <strong>{item.question}</strong>
-                    {item.timestamp && (
-                      <small style={{ display: "block", opacity: 0.7 }}>
-                        {new Date(item.timestamp).toLocaleString()}
-                      </small>
-                    )}
-                  </div>
+                <div className="history-row">
+                  <button
+                    type="button"
+                    className="history-main"
+                    onClick={() => onSelect && onSelect(item.question)}
+                  >
+                    <MessageSquare
+                      size={18}
+                      className="text-sky-400 shrink-0"
+                      aria-hidden="true"
+                    />
+                    <span className="history-content-col">
+                      <strong>{item.question}</strong>
+                      {item.timestamp && (
+                        <small>
+                          <Clock size={12} aria-hidden="true" />
+                          <span>
+                            {new Date(item.timestamp).toLocaleString()}
+                          </span>
+                        </small>
+                      )}
+                    </span>
+                  </button>
 
                   {item.answer && (
                     <button
                       type="button"
                       className="expand-btn"
-                      onClick={(e) => toggleExpand(e, i)}
-                      style={{
-                        background: "rgba(255, 255, 255, 0.1)",
-                        border: "none",
-                        color: "#fff",
-                        borderRadius: "6px",
-                        padding: "6px 12px",
-                        cursor: "pointer",
-                        fontSize: "0.8rem",
-                        marginLeft: "12px",
-                      }}
+                      onClick={() => setExpandedIndex(isExpanded ? null : i)}
+                      aria-expanded={isExpanded}
+                      aria-controls={detailsId}
                     >
-                      {isExpanded ? "Collapse ▲" : "Expand ▼"}
+                      <span>{isExpanded ? "Collapse" : "Expand"}</span>
+                      {isExpanded ? (
+                        <ChevronUp size={14} aria-hidden="true" />
+                      ) : (
+                        <ChevronDown size={14} aria-hidden="true" />
+                      )}
                     </button>
                   )}
                 </div>
 
                 {isExpanded && item.answer && (
-                  <div
-                    className="history-details"
-                    style={{
-                      padding: "12px 16px 16px 44px",
-                      background: "rgba(0, 0, 0, 0.2)",
-                      borderTop: "1px solid rgba(255, 255, 255, 0.05)",
-                      textAlign: "left",
-                    }}
-                  >
+                  <div className="history-details" id={detailsId}>
                     <ReactMarkdown>{item.answer}</ReactMarkdown>
                   </div>
                 )}
@@ -113,3 +114,5 @@ export function History({ history = [], onSelect }) {
     </section>
   );
 }
+
+export default History;

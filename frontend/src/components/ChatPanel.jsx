@@ -1,36 +1,124 @@
 import { useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
+import {
+  ArrowUp,
+  CalendarDays,
+  ChevronRight,
+  CloudSun,
+  LogIn,
+  Mic,
+  ShieldAlert,
+  Sparkles,
+  Square,
+  StopCircle,
+} from "lucide-react";
+import "./ChatPanel.css";
+
+const SUGGESTIONS = [
+  {
+    icon: CloudSun,
+    title: "Today's conditions",
+    detail: "Temperature, rain, and wind",
+    prompt: "What are the current weather conditions?",
+  },
+  {
+    icon: CalendarDays,
+    title: "The week ahead",
+    detail: "Highs, lows, and rain for seven days",
+    prompt: "What do the next seven days look like?",
+  },
+  {
+    icon: ShieldAlert,
+    title: "Hazard check",
+    detail: "Active warnings and air quality",
+    prompt: "Are there any active weather warnings or air quality concerns?",
+  },
+];
+
+function TypingDots() {
+  return (
+    <span className="chat-typing" role="status" aria-label="WeatherGPT is thinking">
+      <i />
+      <i />
+      <i />
+    </span>
+  );
+}
 
 function ChatMessage({ message }) {
   const isAssistant = message.role === "assistant";
 
-  return (
-    <article className={`chat-message ${message.role}`}>
-      {isAssistant && <span className="bot-avatar">●</span>}
-
-      <section>
-        <div className="bubble">
-          <ReactMarkdown>{message.text}</ReactMarkdown>
-          {message.streaming && <span className="typing-caret" />}
+  if (isAssistant) {
+    return (
+      <article className="chat-msg chat-msg--assistant">
+        <div className="chat-msg__meta">
+          <span>WeatherGPT</span>
+          {message.time && <time>{message.time}</time>}
         </div>
+        <div className="chat-msg__body">
+          {message.text ? (
+            <ReactMarkdown>{message.text}</ReactMarkdown>
+          ) : message.streaming ? (
+            <TypingDots />
+          ) : null}
+          {message.streaming && message.text && (
+            <span className="typing-caret" aria-hidden="true" />
+          )}
+        </div>
+      </article>
+    );
+  }
 
-        {message.time && <time>{message.time}</time>}
-      </section>
+  return (
+    <article className="chat-msg chat-msg--user">
+      <div className="chat-msg__body">
+        <ReactMarkdown>{message.text}</ReactMarkdown>
+      </div>
+      {message.time && <time className="chat-msg__time">{message.time}</time>}
     </article>
   );
 }
 
-function TypingIndicator() {
+function ChatIntro({ location, authenticated, onQuick, onLogin }) {
   return (
-    <article className="chat-message assistant">
-      <span className="bot-avatar">●</span>
-
-      <p className="bubble typing">
-        <i />
-        <i />
-        <i />
+    <div className="chat-intro">
+      <h3>Ask about the weather</h3>
+      <p>
+        Current conditions, the week ahead, and local hazards
+        {location?.name ? ` for ${location.name}` : ""}.
       </p>
-    </article>
+
+      <div className="chat-suggestions">
+        {SUGGESTIONS.map(({ icon: Icon, title, detail, prompt }) => (
+          <button
+            key={title}
+            type="button"
+            className="chat-suggestion"
+            onClick={() => onQuick(prompt)}
+          >
+            <Icon size={16} aria-hidden="true" />
+            <span className="chat-suggestion__text">
+              <strong>{title}</strong>
+              <small>{detail}</small>
+            </span>
+            <ChevronRight
+              size={14}
+              className="chat-suggestion__chevron"
+              aria-hidden="true"
+            />
+          </button>
+        ))}
+      </div>
+
+      {!authenticated && onLogin && (
+        <button type="button" className="chat-signin" onClick={onLogin}>
+          <LogIn size={13} aria-hidden="true" />
+          <span>
+            <strong>Sign in</strong> to send messages and keep your history
+          </span>
+        </button>
+      )}
+    </div>
   );
 }
 
@@ -42,17 +130,24 @@ export function ChatPanel({
   onQuick,
   connected,
   streaming,
+  authenticated = false,
   onLogin,
   language,
+  location,
   onStop,
 }) {
   const endRef = useRef(null);
+  const textareaRef = useRef(null);
   const recognitionRef = useRef(null);
   const [isRecording, setIsRecording] = useState(false);
 
   useEffect(() => {
+    const reduceMotion = window.matchMedia(
+      "(prefers-reduced-motion: reduce)",
+    ).matches;
+
     endRef.current?.scrollIntoView({
-      behavior: "smooth",
+      behavior: reduceMotion ? "auto" : "smooth",
       block: "nearest",
     });
   }, [messages, streaming]);
@@ -69,6 +164,11 @@ export function ChatPanel({
       event.preventDefault();
       submit(event);
     }
+  };
+
+  const handleSuggestion = (prompt) => {
+    onQuick(prompt);
+    requestAnimationFrame(() => textareaRef.current?.focus());
   };
 
   const startVoiceInput = () => {
@@ -96,9 +196,7 @@ export function ChatPanel({
 
     recognition.lang = langCodes[language] || "en-IN";
 
-    recognition.onstart = () => {
-      setIsRecording(true);
-    };
+    recognition.onstart = () => setIsRecording(true);
 
     recognition.onresult = (event) => {
       const transcript = event.results[0][0].transcript;
@@ -110,9 +208,7 @@ export function ChatPanel({
       setIsRecording(false);
     };
 
-    recognition.onend = () => {
-      setIsRecording(false);
-    };
+    recognition.onend = () => setIsRecording(false);
 
     recognition.start();
   };
@@ -124,33 +220,47 @@ export function ChatPanel({
     }
   };
 
+  const status = !authenticated
+    ? "Signed out"
+    : connected
+      ? "Online"
+      : "Connecting…";
+  const statusClass = !authenticated
+    ? "chat-status--offline"
+    : connected
+      ? "chat-status--online"
+      : "chat-status--pending";
+
   return (
-    <aside className="chat-panel">
-      {/* Header */}
-      <header className="chat-head">
-        <span className="ai-logo">✦</span>
-        <section>
+    <aside className="chat-panel" aria-label="WeatherGPT assistant">
+      <header className="chat-header">
+        <span className="chat-header__mark" aria-hidden="true">
+          <Sparkles size={15} />
+        </span>
+        <div className="chat-header__text">
           <h2>WeatherGPT</h2>
-          <p>
-            <i className={connected ? "online" : "offline"} />
-            {connected
-              ? "Your AI Weather Assistant"
-              : "Live AI Weather Assistant"}
+          <p className={`chat-status ${statusClass}`}>
+            <i aria-hidden="true" />
+            {status}
           </p>
-        </section>
+        </div>
       </header>
 
-      {/* Messages */}
-      <main className="chat-scroll">
+      <div
+        className={`chat-thread ${messages.length === 0 ? "chat-thread--empty" : ""}`}
+        role="log"
+        aria-live="polite"
+        aria-relevant="additions text"
+        aria-busy={streaming}
+        aria-label="Conversation"
+      >
         {messages.length === 0 ? (
-          <section className="chat-empty">
-            <span>✦</span>
-            <h3>How can I help?</h3>
-            <p>
-              Ask me about weather, forecasts, warnings, climate, or local
-              advice.
-            </p>
-          </section>
+          <ChatIntro
+            location={location}
+            authenticated={authenticated}
+            onQuick={handleSuggestion}
+            onLogin={onLogin}
+          />
         ) : (
           messages.map((message, index) => (
             <ChatMessage key={`${message.role}-${index}`} message={message} />
@@ -158,91 +268,78 @@ export function ChatPanel({
         )}
 
         {streaming && messages[messages.length - 1]?.role !== "assistant" && (
-          <TypingIndicator />
+          <article className="chat-msg chat-msg--assistant">
+            <div className="chat-msg__meta">
+              <span>WeatherGPT</span>
+            </div>
+            <TypingDots />
+          </article>
         )}
-        <span ref={endRef} />
-      </main>
 
-      {/* Quick actions */}
-      <nav className="chat-quick" aria-label="Quick questions">
-        {["Current weather", "5 day forecast", "Weather alerts"].map(
-          (question) => (
+        <span ref={endRef} />
+      </div>
+
+      <form
+        className="chat-composer"
+        onSubmit={submit}
+        aria-label="Ask the weather assistant"
+      >
+        <div className="chat-field">
+          <textarea
+            ref={textareaRef}
+            value={input}
+            onChange={(event) => setInput(event.target.value)}
+            onKeyDown={handleKeyDown}
+            aria-label="Message"
+            placeholder={
+              isRecording ? "Listening…" : "Ask about the weather"
+            }
+            rows={1}
+            disabled={streaming}
+          />
+
+          {authenticated && (
             <button
-              key={question}
               type="button"
-              onClick={() => onQuick(question)}
+              className={`chat-icon-btn ${isRecording ? "is-recording" : ""}`}
+              aria-label={isRecording ? "Stop voice input" : "Use microphone"}
+              title={isRecording ? "Stop recording" : "Use microphone"}
+              onClick={isRecording ? stopVoiceInput : startVoiceInput}
               disabled={streaming}
             >
-              {question}
+              {isRecording ? <Square size={14} /> : <Mic size={16} />}
             </button>
-          ),
-        )}
-      </nav>
+          )}
 
-      {/* Input Form */}
-      <form className="chat-input" onSubmit={submit}>
-        <button
-          type="button"
-          className={`mic ${isRecording ? "recording" : ""}`}
-          aria-label="Voice input"
-          title={
-            !connected ? "Sign in to use voice features" : "Use microphone"
-          }
-          onClick={() => {
-            if (!connected) {
-              alert("Sign in to use voice and location features.");
-              if (onLogin) onLogin();
-              return;
-            }
-            isRecording ? stopVoiceInput() : startVoiceInput();
-          }}
-          disabled={streaming}
-          style={{
-            color: isRecording ? "#ff4757" : "inherit",
-            animation: isRecording ? "pulse 1.5s infinite" : "none",
-            opacity: !connected ? 0.5 : 1,
-            cursor: !connected ? "not-allowed" : "pointer",
-          }}
-        >
-          {isRecording ? "◼" : "🎙️"}
-        </button>
-
-        <textarea
-          value={input}
-          onChange={(event) => setInput(event.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder={
-            isRecording ? "Listening..." : "Ask anything about the weather..."
-          }
-          rows={1}
-          disabled={streaming}
-        />
-
-        {streaming ? (
-          <button
-            className="send stop-btn"
-            type="button"
-            onClick={onStop}
-            aria-label="Stop generating"
-            style={{ fontSize: "1.2rem" }}
-          >
-            ◼
-          </button>
-        ) : (
-          <button
-            className="send"
-            type="submit"
-            disabled={!input.trim()}
-            aria-label="Send message"
-          >
-            ➤
-          </button>
-        )}
+          {streaming ? (
+            <button
+              type="button"
+              className="chat-send chat-send--stop"
+              onClick={onStop}
+              aria-label="Stop generating"
+              title="Stop generating"
+            >
+              <StopCircle size={17} />
+            </button>
+          ) : (
+            <button
+              type="submit"
+              className="chat-send"
+              disabled={!input.trim()}
+              aria-label="Send message"
+              title="Send"
+            >
+              <ArrowUp size={17} />
+            </button>
+          )}
+        </div>
       </form>
 
-      <p className="chat-disclaimer">
-        WeatherGPT can make mistakes. Please verify important information.
+      <p className="chat-note">
+        AI-generated guidance. Check official warnings before acting.
       </p>
     </aside>
   );
 }
+
+export default ChatPanel;
